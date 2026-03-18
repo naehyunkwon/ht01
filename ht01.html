@@ -180,9 +180,19 @@ input:checked+.sw-slider:before{transform:translateX(20px)}
 .btn-primary{background:var(--accent2);color:#fff}
 .btn-danger{background:#FF453A22;color:#FF453A}
 .empty{text-align:center;padding:60px 20px;color:var(--sub);font-size:15px}
+/* SYNC INDICATOR */
+.sync-indicator{position:fixed;bottom:calc(var(--safe-bot) + 72px);right:14px;padding:5px 12px;
+  border-radius:20px;font-size:12px;font-weight:600;z-index:9999;display:none;
+  box-shadow:var(--shadow);transition:opacity .3s;}
+.sync-indicator.syncing{background:var(--card);color:var(--accent2);}
+.sync-indicator.done{background:var(--card);color:var(--accent);}
+.sync-indicator.error{background:var(--card);color:var(--orange);}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
+
+<div id="sync-indicator" class="sync-indicator"></div>
 
 <!-- TOP NAV -->
 <nav class="nav">
@@ -418,6 +428,91 @@ const T = {
 let lang='ko';
 function t(k){return T[lang][k]??k}
 
+// ── Supabase ──
+const SUPABASE_URL='https://kthhaovwykiunzjvfqyd.supabase.co';
+const SUPABASE_KEY='sb_publishable_--W7-f2ovCAMLqlrpm-8CQ_kA86ro37';
+let supabaseClient=null;
+
+function initSupabase(){
+  try{
+    if(window.supabase&&window.supabase.createClient){
+      supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    }
+  }catch(e){console.warn('Supabase init failed:',e);}
+}
+
+let syncTimer=null;
+function showSync(state){
+  const el=document.getElementById('sync-indicator');
+  if(!el)return;
+  clearTimeout(el._hideTimer);
+  if(state==='syncing'){
+    el.className='sync-indicator syncing';
+    el.textContent='↑ 동기화 중…';
+    el.style.display='block';
+  } else if(state==='done'){
+    el.className='sync-indicator done';
+    el.textContent='✓ 저장됨';
+    el.style.display='block';
+    el._hideTimer=setTimeout(()=>{el.style.display='none';},2000);
+  } else if(state==='error'){
+    el.className='sync-indicator error';
+    el.textContent='⚠ 오프라인 저장됨';
+    el.style.display='block';
+    el._hideTimer=setTimeout(()=>{el.style.display='none';},3000);
+  }
+}
+
+async function syncRecord(date){
+  if(!supabaseClient)return;
+  const rec=DB.records[date];
+  if(!rec)return;
+  const score=calcScore(rec);
+  const payload={
+    date,
+    weight:rec.weight??null,
+    sleep:rec.sleep??null,
+    exercise:rec.exercise??null,
+    exercise_type:rec.exercise_type??null,
+    meal:rec.meal??null,
+    water:rec.water??null,
+    stress:rec.stress??null,
+    coffee:rec.coffee??null,
+    alcohol:rec.alcohol??null,
+    alcohol_type:rec.alcohol_type??null,
+    smoking:rec.smoking??null,
+    score:score
+  };
+  showSync('syncing');
+  try{
+    const {error}=await supabaseClient.from('health_records').upsert(payload,{onConflict:'date'});
+    if(error)throw error;
+    showSync('done');
+  }catch(e){
+    console.warn('Supabase sync error:',e);
+    showSync('error');
+  }
+}
+
+async function loadFromSupabase(){
+  if(!supabaseClient)return;
+  try{
+    const {data,error}=await supabaseClient.from('health_records').select('*');
+    if(error)throw error;
+    if(data&&data.length>0){
+      data.forEach(row=>{
+        const {date,score,...fields}=row;
+        const rec={};
+        Object.entries(fields).forEach(([k,v])=>{if(v!==null&&v!==undefined)rec[k]=v;});
+        DB.records[date]={...(DB.records[date]||{}),...rec};
+      });
+      saveDB();
+    }
+  }catch(e){
+    console.warn('Supabase load error:',e);
+  }
+}
+
 // ── Storage ──
 let DB={records:{},settings:{name:'',height:'',lang:'ko',order:null,theme:'auto',openaiKey:''}};
 function loadDB(){try{const d=localStorage.getItem('ht2');if(d)DB=JSON.parse(d)}catch(e){}}
@@ -604,7 +699,7 @@ window.toggleSel=function(btn,id,val){
   group.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   const rec=DB.records[today()]||{};
-  rec[id]=val;DB.records[today()]=rec;saveDB();
+  rec[id]=val;DB.records[today()]=rec;saveDB();syncRecord(today());
   document.getElementById('val-'+id).innerHTML=fmtVal(METRICS_DEF.find(x=>x.id===id),rec);
   updateRing();
 };
@@ -630,7 +725,7 @@ window.saveMetric=function(id){
       rec[id]=Math.round(val*10)/10; // round to 1 decimal
     }
   }
-  DB.records[today()]=rec;saveDB();
+  DB.records[today()]=rec;saveDB();syncRecord(today());
   document.getElementById('val-'+id).innerHTML=fmtVal(m,rec);
   document.getElementById('form-'+id).classList.remove('open');
   updateRing();
@@ -867,7 +962,7 @@ window.editRecField=function(e){
       btn.textContent=o;
       btn.onclick=ev=>{
         ev.stopPropagation();
-        rec[id]=val;DB.records[date]=rec;saveDB();
+        rec[id]=val;DB.records[date]=rec;saveDB();syncRecord(date);
         valEl.textContent=m.opts()[m.vals.indexOf(val)]||val;
         valEl.style.display='';wrap.remove();activeEditRow=null;
         
@@ -889,7 +984,7 @@ function commitEdit(date,id,m,input,valEl,editBtn){
     const v=parseFloat(raw);
     if(!isNaN(v))rec[id]=v;
   }
-  DB.records[date]=rec;saveDB();
+  DB.records[date]=rec;saveDB();syncRecord(date);
   // restore display label
   valEl.innerHTML=fmtVal(m,rec);
   valEl.style.display='';
@@ -1308,6 +1403,13 @@ applyLang();
 applyTheme(DB.settings.theme||'auto');
 metricOrder=DB.settings.order;
 renderHome();
+// Load Supabase data and refresh UI
+initSupabase();
+loadFromSupabase().then(()=>{
+  renderHome();
+  if(document.getElementById('page-records').classList.contains('active'))renderRecords();
+  if(document.getElementById('page-charts').classList.contains('active'))renderCharts();
+});
 
 // ── Daily Rollover Check ──
 let lastKnownDate=today();
