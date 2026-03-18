@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>건강 트래커</title>
+<style>
+:root {
+  --accent:#30D158;--accent2:#0A84FF;--red:#FF453A;--orange:#FF9F0A;--purple:#BF5AF2;
+  --bg:#F2F2F7;--card:#FFF;--card2:#F2F2F7;--text:#000;--sub:#8E8E93;--sep:#C6C6C8;
+  --nav:#F9F9F9EE;--radius:16px;--radius-sm:10px;--shadow:0 2px 16px rgba(0,0,0,.08);
+  --safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px);
+  --nav-h:calc(52px + var(--safe-top));
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#000;--card:#1C1C1E;--card2:#2C2C2E;--text:#FFF;--sub:#8E8E93;--sep:#38383A;
+  --nav:#1C1C1EEE;--shadow:0 2px 16px rgba(0,0,0,.4);
+}}
+/* Forced theme overrides (set by user in Settings) */
+html.force-light{--bg:#F2F2F7;--card:#FFF;--card2:#F2F2F7;--text:#000;--sub:#8E8E93;--sep:#C6C6C8;
+  --nav:#F9F9F9EE;--shadow:0 2px 16px rgba(0,0,0,.08);color-scheme:light}
+html.force-dark{--bg:#000;--card:#1C1C1E;--card2:#2C2C2E;--text:#FFF;--sub:#8E8E93;--sep:#38383A;
+  --nav:#1C1C1EEE;--shadow:0 2px 16px rgba(0,0,0,.4);color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden;
+  padding-top:var(--nav-h)}
+/* TOP NAV — equal top/bottom margins around icons+text */
+.nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);
+  background:var(--nav);backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-top:2px solid var(--sep);border-bottom:1px solid var(--sep);
+  display:flex;align-items:center;
+  padding-top:var(--safe-top);
+  z-index:999}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  cursor:pointer;color:var(--sub);transition:color .2s;padding:2px 0}
+.nav-tab.active{color:var(--accent2)}
+.nav-tab svg{width:24px;height:24px;fill:currentColor}
+.nav-tab span{font-size:10px;font-weight:500;letter-spacing:-.2px}
+/* PAGES */
+.page{display:none;padding:0 0 32px;animation:fadeIn .25s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+/* HEADER */
+.header{padding:16px 20px 10px}
+.header h1{font-size:28px;font-weight:700;letter-spacing:-.5px}
+.header .sub{color:var(--sub);font-size:13px;margin-top:2px}
+.header .date-lbl{color:var(--sub);font-size:13px;font-weight:500;margin-top:2px}
+/* SCORE RING */
+.score-wrap{display:flex;flex-direction:column;align-items:center;padding:12px 20px 8px}
+.ring-container{position:relative;width:180px;height:180px}
+.ring-svg{transform:rotate(-90deg)}
+.ring-track{fill:none;stroke:var(--sep);stroke-width:14}
+.ring-fill{fill:none;stroke:var(--accent);stroke-width:14;stroke-linecap:round;
+  stroke-dasharray:502;stroke-dashoffset:502;transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1),stroke .4s}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-num{font-size:48px;font-weight:800;letter-spacing:-2px;line-height:1}
+.score-lbl{font-size:12px;color:var(--sub);font-weight:500;margin-top:2px}
+.score-grade{font-size:13px;font-weight:600;margin-top:6px}
+/* CARDS */
+.section-title{font-size:13px;font-weight:600;color:var(--sub);text-transform:uppercase;
+  letter-spacing:.5px;padding:12px 20px 6px}
+.card{background:var(--card);border-radius:var(--radius);margin:0 16px 10px;
+  box-shadow:var(--shadow);overflow:hidden}
+/* DRAG HANDLE */
+.metric-row{display:flex;align-items:center;padding:14px 12px 14px 0;gap:10px;transition:background .15s}
+.drag-handle{padding:0 10px 0 14px;color:var(--sep);font-size:20px;cursor:grab;
+  touch-action:none;user-select:none;flex-shrink:0;line-height:1}
+.drag-handle:active{cursor:grabbing;color:var(--sub)}
+.row-tap{display:flex;align-items:center;flex:1;gap:10px;cursor:pointer;min-width:0}
+.row-tap:active .metric-icon{transform:scale(.93)}
+.metric-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;flex-shrink:0;transition:transform .15s}
+.metric-info{flex:1;min-width:0}
+.metric-name{font-size:15px;font-weight:500}
+.metric-val{font-size:13px;color:var(--sub);margin-top:1px}
+.metric-arrow{color:var(--sub);font-size:18px;padding-right:4px;flex-shrink:0}
+.metric-form{padding:0 16px 14px;border-top:1px solid var(--sep);display:none}
+.metric-form.open{display:block}
+.metric-form label{display:block;font-size:13px;color:var(--sub);margin:10px 0 4px}
+.metric-form input[type=number],.metric-form input[type=text],.metric-form select{
+  width:100%;background:var(--card2);border:none;border-radius:var(--radius-sm);
+  padding:10px 12px;font-size:15px;color:var(--text);outline:none;font-family:inherit}
+.metric-form input::placeholder{color:var(--sub)}
+.toggle-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.toggle-btn{flex:1;min-width:60px;padding:8px 4px;border:1.5px solid var(--sep);
+  border-radius:var(--radius-sm);background:none;color:var(--text);font-size:13px;
+  font-weight:500;cursor:pointer;transition:all .2s;text-align:center;font-family:inherit}
+.toggle-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.save-btn{width:100%;margin-top:12px;padding:12px;background:var(--accent2);border:none;
+  border-radius:var(--radius-sm);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+/* DRAG STATE */
+.card{
+  /* smooth push animation for neighbours during drag */
+  transition:transform 0.22s cubic-bezier(0.4,0,0.2,1),box-shadow 0.2s;
+}
+.card.dragging{
+  opacity:.88;transform:scale(1.08); /* upwards scale without rotation */
+  box-shadow:0 24px 60px rgba(0,0,0,.38);z-index:100;
+  position:relative;
+  transition:box-shadow 0.2s,opacity 0.2s;
+}
+/* RECORDS */
+.rec-day{background:var(--card);border-radius:var(--radius);margin:0 16px 10px;
+  padding:14px 16px;box-shadow:var(--shadow)}
+.rec-date{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:10px}
+.rec-grid{
+  display:flex;
+  flex-direction:row;
+  gap:8px;
+  align-items:flex-start;
+}
+.rec-col{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  flex:1;
+  min-width:0;
+}
+.rec-field{display:flex;align-items:center;gap:5px;padding:5px 6px;border-radius:8px;
+  background:var(--card2);transition:background .15s;min-width:0;overflow:hidden;width:100%}
+.rec-field:active{background:var(--sep)}
+.rec-field-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
+.rec-field-name{font-size:11px;color:var(--sub);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-field-val{font-size:12px;font-weight:600;margin-left:auto;white-space:nowrap}
+.rec-field-edit{display:none} /* no longer shown as a separate button */
+
+.rec-field-input{
+  /* 16px prevents iOS auto-zoom */
+  font-size:16px;font-weight:500;background:var(--card2);border:1.5px solid var(--accent2);
+  border-radius:8px;padding:4px 8px;color:var(--text);outline:none;font-family:inherit;
+  width:110px;text-align:right;-webkit-appearance:none;appearance:none;
+}
+.chip{background:var(--card2);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:500}
+.chip.good{background:#30D15822;color:#30D158}
+.chip.warn{background:#FF9F0A22;color:#FF9F0A}
+.chip.bad{background:#FF453A22;color:#FF453A}
+/* CHARTS */
+.chart-card{background:var(--card);border-radius:var(--radius);margin:0 16px 10px;padding:16px;
+  box-shadow:var(--shadow);overflow:hidden}
+.chart-card.pinned{position:sticky;top:calc(var(--nav-h) + 4px);z-index:100;border:1.5px solid rgba(48, 209, 88, 0.6);box-shadow:0 6px 24px rgba(48, 209, 88, 0.15);background:var(--card);}
+.chart-title{font-size:15px;font-weight:600;margin-bottom:12px}
+.chart-scales{display:flex;gap:6px;padding:4px 16px 0}
+.scale-btn{padding:5px 12px;border-radius:20px;border:none;background:var(--card2);color:var(--sub);
+  font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.scale-btn.active{background:var(--accent2);color:#fff}
+/* horizontal scroll wrapper for canvas */
+.chart-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px 4px}
+.chart-scroll canvas{display:block;border-radius:8px}
+/* SETTINGS */
+.settings-card{background:var(--card);border-radius:var(--radius);margin:0 16px 10px;
+  overflow:hidden;box-shadow:var(--shadow)}
+.settings-row{display:flex;align-items:center;padding:14px 16px;gap:12px;
+  border-bottom:1px solid var(--sep)}
+.settings-row:last-child{border-bottom:none}
+.settings-row .label{flex:1;font-size:15px}
+.settings-row .sub{font-size:13px;color:var(--sub)}
+.settings-row input[type=number],.settings-row input[type=text]{
+  background:var(--card2);border:none;border-radius:var(--radius-sm);padding:6px 10px;
+  font-size:15px;color:var(--text);outline:none;font-family:inherit;width:120px;text-align:right}
+.toggle-sw{position:relative;width:51px;height:31px;flex-shrink:0}
+.toggle-sw input{opacity:0;width:0;height:0}
+.sw-slider{position:absolute;inset:0;background:var(--sep);border-radius:34px;cursor:pointer;transition:.3s}
+.sw-slider:before{content:"";position:absolute;height:27px;width:27px;left:2px;top:2px;
+  background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+input:checked+.sw-slider{background:var(--accent)}
+input:checked+.sw-slider:before{transform:translateX(20px)}
+/* 3-button segmented control for theme */
+.theme-seg{display:flex;background:var(--card2);border-radius:9px;padding:2px;gap:2px}
+.seg-btn{flex:1;padding:5px 10px;border:none;border-radius:7px;font-size:12px;font-weight:500;
+  font-family:inherit;color:var(--sub);background:none;cursor:pointer;transition:all .18s;white-space:nowrap}
+.seg-btn.active{background:var(--card);color:var(--text);font-weight:600;
+  box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.btn-row{padding:14px 16px}
+.action-btn{width:100%;padding:14px;border:none;border-radius:var(--radius-sm);
+  font-size:15px;font-weight:600;font-family:inherit;cursor:pointer}
+.btn-primary{background:var(--accent2);color:#fff}
+.btn-danger{background:#FF453A22;color:#FF453A}
+.empty{text-align:center;padding:60px 20px;color:var(--sub);font-size:15px}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="nav">
+  <div class="nav-tab active" id="tab-home" onclick="switchTab('home')">
+    <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    <span id="nav-home">홈</span>
+  </div>
+  <div class="nav-tab" id="tab-records" onclick="switchTab('records')">
+    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+    <span id="nav-records">기록</span>
+  </div>
+  <div class="nav-tab" id="tab-charts" onclick="switchTab('charts')">
+    <svg viewBox="0 0 24 24"><path d="M3.5 18.5l6-6 4 4 8-10.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <span id="nav-charts">차트</span>
+  </div>
+  <div class="nav-tab" id="tab-ai" onclick="switchTab('ai')">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7 1.25L9 4 6 10.25 2 12l4 1.75L9 20l3-6.25L16 12l-4-1.75zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg>
+    <span id="nav-ai">AI 추천</span>
+  </div>
+  <div class="nav-tab" id="tab-settings" onclick="switchTab('settings')">
+    <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+    <span id="nav-settings">설정</span>
+  </div>
+</nav>
+
+<!-- HOME -->
+<div id="page-home" class="page active">
+  <div class="header">
+    <div id="greeting" class="sub"></div>
+    <h1 id="home-title">오늘의 건강</h1>
+    <div id="home-date" class="date-lbl"></div>
+  </div>
+  <div class="score-wrap">
+    <div class="ring-container">
+      <svg class="ring-svg" viewBox="0 0 180 180" width="180" height="180">
+        <circle class="ring-track" cx="90" cy="90" r="80"/>
+        <circle id="ring-fill" class="ring-fill" cx="90" cy="90" r="80"/>
+      </svg>
+      <div class="ring-center">
+        <div id="score-num" class="score-num">–</div>
+        <div id="score-lbl" class="score-lbl">건강 점수</div>
+      </div>
+    </div>
+    <div id="score-grade" class="score-grade"></div>
+  </div>
+  <div id="score-breakdown" style="padding:0 16px 4px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center"></div>
+  <div class="section-title" id="metrics-title">오늘 기록</div>
+  <div id="metric-cards"></div>
+</div>
+
+<!-- RECORDS -->
+<div id="page-records" class="page">
+  <div class="header"><h1 id="records-title">기록</h1></div>
+  <div id="records-list"><p class="empty" id="no-records">기록이 없습니다</p></div>
+</div>
+
+<!-- CHARTS -->
+<div id="page-charts" class="page">
+  <div class="header"><h1 id="charts-title">차트</h1></div>
+  <div class="chart-scales">
+    <button class="scale-btn active" onclick="setScale('1W')">1W</button>
+    <button class="scale-btn" onclick="setScale('1M')">1M</button>
+    <button class="scale-btn" onclick="setScale('3M')">3M</button>
+    <button class="scale-btn" onclick="setScale('1Y')">1Y</button>
+  </div>
+  <div id="charts-list" style="padding-top:8px"></div>
+</div>
+
+<!-- AI RECOMMEND -->
+<div id="page-ai" class="page">
+  <div class="header"><h1 id="ai-title">AI 추천</h1></div>
+  
+  <div class="card" style="margin:16px; padding:20px;">
+    <h3 id="ai-interp-title" style="font-size:16px; margin-bottom:12px; border-bottom:1px solid var(--sep); padding-bottom:10px;">최근 건강 모니터링 해석</h3>
+    <div id="ai-interp-box" style="font-size:15px; color:var(--text); line-height:1.6; white-space:pre-wrap; min-height: 100px;">데이터를 분석하려면 아래 버튼을 누르세요.</div>
+  </div>
+
+  <div class="card" style="margin:16px; padding:20px;">
+    <h3 id="ai-reco-title" style="font-size:16px; margin-bottom:12px; border-bottom:1px solid var(--sep); padding-bottom:10px;">AI 맞춤 추천</h3>
+    <div id="ai-reco-box" style="font-size:15px; color:var(--text); line-height:1.6; white-space:pre-wrap; min-height: 100px;">-</div>
+  </div>
+
+  <div style="padding:16px;">
+    <button class="action-btn btn-primary" onclick="generateAI()" id="btn-generate-ai">AI 분석 생성하기</button>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="page-settings" class="page">
+  <div class="header"><h1 id="settings-title">설정</h1></div>
+  <div class="section-title" id="profile-title">프로필</div>
+  <div class="settings-card">
+    <div class="settings-row">
+      <span class="label" id="lbl-name">이름</span>
+      <input type="text" id="set-name" placeholder="홍길동" style="width:140px;text-align:right">
+    </div>
+    <div class="settings-row">
+      <span class="label" id="lbl-height">키 (cm)</span>
+      <input type="number" id="set-height" placeholder="170" min="100" max="250">
+    </div>
+    <div class="settings-row">
+      <span class="label" id="lbl-apikey">OpenAI API Key</span>
+      <input type="password" id="set-apikey" placeholder="sk-..." style="width:140px;text-align:right">
+    </div>
+  </div>
+  <div class="section-title" id="prefs-title">환경설정</div>
+  <div class="settings-card">
+    <div class="settings-row">
+      <span class="label" id="lbl-lang">언어 / Language</span>
+      <label class="toggle-sw">
+        <input type="checkbox" id="lang-toggle" onchange="toggleLang()">
+        <span class="sw-slider"></span>
+      </label>
+      <span class="sub" id="lang-label">KO</span>
+    </div>
+    <div class="settings-row">
+      <span class="label" id="lbl-theme">화면 모드</span>
+      <div class="theme-seg" id="theme-seg">
+        <button class="seg-btn" data-val="auto" onclick="setTheme('auto')" id="tseg-auto">자동</button>
+        <button class="seg-btn" data-val="dark" onclick="setTheme('dark')" id="tseg-dark">다크</button>
+        <button class="seg-btn" data-val="light" onclick="setTheme('light')" id="tseg-light">라이트</button>
+      </div>
+    </div>
+  </div>
+  <div class="section-title" id="data-title">데이터</div>
+  <div class="settings-card">
+    <div class="btn-row"><button class="action-btn btn-primary" onclick="exportCSV()" id="btn-export">CSV로 내보내기</button></div>
+    <div class="btn-row" style="padding-top:0"><button class="action-btn btn-danger" onclick="resetData()" id="btn-reset">데이터 초기화</button></div>
+  </div>
+  <div class="section-title" id="logic-title">점수 계산 방식</div>
+  <details class="settings-card" id="score-logic-card" style="margin-bottom:20px;">
+    <summary style="padding:16px;font-weight:600;cursor:pointer;outline:none;" id="logic-summary">건강 점수는 어떻게 계산되나요?</summary>
+    <div style="padding:0 16px 16px;font-size:13px;color:var(--sub);line-height:1.6;" id="logic-content">
+      <p style="margin-bottom:8px">건강 점수(100점 만점)는 다음 항목들을 종합하여 계산됩니다:</p>
+      <ul style="padding-left:16px;margin-bottom:12px">
+        <li><b>수면 (20점):</b> 7~9시간 수면 시 만점. 부족하거나 과수면 시 감점. (수면 재단 권장량)</li>
+        <li><b>운동 (20점):</b> 30분 이상 시 만점. (WHO 권장 일일 활동량)</li>
+        <li><b>수분 (15점):</b> 2000ml 이상 시 만점. (성인 평균 권장 수분 섭취량)</li>
+        <li><b>스트레스 (15점):</b> '낮음' 시 만점, '중간' 7.5점, '높음' 0점.</li>
+        <li><b>식단 (15점):</b> '좋음' 시 만점, '보통' 7.5점, '나쁨' 0점.</li>
+        <li><b>체질량지수/BMI (15점):</b> BMI 18.5~24.9 (정상 체중) 범위일 때 만점. (대한비만학회 기준)</li>
+      </ul>
+      <p><b>감점 요소 (페널티):</b></p>
+      <ul style="padding-left:16px">
+        <li><b>음주:</b> 순수 알코올 섭취량이 100ml 초과 시, 총점의 30% 감점.</li>
+        <li><b>흡연:</b> 흡연 시 총점의 10% 감점 (단, 30일 이상 연속 금연 성공 시 감점 면제).</li>
+      </ul>
+    </div>
+  </details>
+  <div style="height:20px"></div>
+</div>
+
+<script>
+// ── i18n ──
+const T = {
+  ko:{
+    home:'오늘의 건강',records:'기록',charts:'차트',settings:'설정',
+    navHome:'홈',navRecords:'기록',navCharts:'차트',navSettings:'설정',
+    profile:'프로필',prefs:'환경설정',data:'데이터',
+    name:'이름',height:'키 (cm)',lang:'언어 / Language',
+    export:'CSV로 내보내기',reset:'데이터 초기화',
+    metricsTitle:'오늘 기록',scoreLabel:'건강 점수',
+    weight:'체중',sleep:'수면',exercise:'운동',meal:'식사 질',
+    water:'수분',stress:'스트레스',coffee:'커피',alcohol:'음주',smoking:'흡연',
+    weightUnit:'kg',sleepUnit:'시간',exUnit:'분',
+    waterUnit:'ml',coffeeUnit:'ml',alcoholUnit:'ml',
+    mealBad:'나쁨',mealNeutral:'보통',mealGood:'좋음',
+    stressLow:'낮음',stressMid:'보통',stressHigh:'높음',
+    exType:'운동 종류',alcType:'주류 종류',
+    yes:'예',no:'아니오',save:'저장',noRecords:'기록이 없습니다',
+    gradeAwesome:'훌륭해요! 🏆',gradeGood:'좋아요! 👍',gradeOk:'보통이에요',gradeLow:'더 노력해요',
+    beer:'맥주',wine:'와인',soju:'소주',spirits:'증류주',other:'기타',
+    morning:'좋은 아침이에요',afternoon:'좋은 오후에요',evening:'좋은 저녁이에요',
+    noData:'데이터 없음',confirmReset:'모든 데이터를 삭제할까요? 되돌릴 수 없습니다.',
+    edit:'수정',theme:'다크 모드',themeAuto:'자동',themeDark:'다크',themeLight:'라이트',
+    logicTitle:'점수 계산 방식',logicSummary:'건강 점수는 어떻게 계산되나요?',
+    navAi:'AI 추천',aiTitle:'AI 추천',aiInterpTitle:'최근 건강 모니터링 해석',aiRecoTitle:'AI 맞춤 추천',
+    aiGenerate:'AI 분석 생성하기',aiWait:'분석 중...',aiNoKey:'설정창에서 OpenAI API 키를 먼저 입력해주세요.',
+    logicContent:`<p style="margin-bottom:8px">건강 점수(100점 만점)는 다음 항목들을 종합하여 계산됩니다:</p>
+      <ul style="padding-left:16px;margin-bottom:12px">
+        <li><b>수면 (20점):</b> 7~9시간 수면 시 만점. 부족하거나 과수면 시 감점. (수면 재단 권장량)</li>
+        <li><b>운동 (20점):</b> 30분 이상 시 만점. (WHO 권장 일일 활동량)</li>
+        <li><b>수분 (15점):</b> 2000ml 이상 시 만점. (성인 평균 권장 수분 섭취량)</li>
+        <li><b>스트레스 (15점):</b> '낮음' 시 만점, '중간' 7.5점, '높음' 0점.</li>
+        <li><b>식단 (15점):</b> '좋음' 시 만점, '보통' 7.5점, '나쁨' 0점.</li>
+        <li><b>체질량지수/BMI (15점):</b> BMI 18.5~24.9 (정상 체중) 범위일 때 만점. (대한비만학회 기준)</li>
+      </ul>
+      <p><b>감점 요소 (페널티):</b></p>
+      <ul style="padding-left:16px">
+        <li><b>음주:</b> 순수 알코올 섭취량이 100ml 초과 시, 총점의 30% 감점.</li>
+        <li><b>흡연:</b> 흡연 시 총점의 10% 감점 (단, 30일 이상 연속 금연 성공 시 감점 면제).</li>
+      </ul>`
+  },
+  en:{
+    home:"Today's Health",records:'Records',charts:'Charts',settings:'Settings',
+    navHome:'Home',navRecords:'Records',navCharts:'Charts',navSettings:'Settings',
+    profile:'Profile',prefs:'Preferences',data:'Data',
+    name:'Name',height:'Height (cm)',lang:'Language / 언어',
+    export:'Export as CSV',reset:'Reset Data',
+    metricsTitle:"Today's Log",scoreLabel:'Health Score',
+    weight:'Weight',sleep:'Sleep',exercise:'Exercise',meal:'Meal Quality',
+    water:'Water',stress:'Stress',coffee:'Coffee',alcohol:'Alcohol',smoking:'Smoking',
+    weightUnit:'kg',sleepUnit:'h',exUnit:'min',
+    waterUnit:'ml',coffeeUnit:'ml',alcoholUnit:'ml',
+    mealBad:'Bad',mealNeutral:'Neutral',mealGood:'Good',
+    stressLow:'Low',stressMid:'Mid',stressHigh:'High',
+    exType:'Exercise type',alcType:'Liquor type',
+    yes:'Yes',no:'No',save:'Save',noRecords:'No records yet',
+    gradeAwesome:'Awesome! 🏆',gradeGood:'Good job! 👍',gradeOk:'Average',gradeLow:'Keep trying',
+    beer:'Beer',wine:'Wine',soju:'Soju',spirits:'Spirits',other:'Other',
+    morning:'Good morning',afternoon:'Good afternoon',evening:'Good evening',
+    noData:'No data',confirmReset:'Delete all data? This cannot be undone.',
+    edit:'Edit',theme:'Dark Mode',themeAuto:'Auto',themeDark:'Dark',themeLight:'Light',
+    logicTitle:'Scoring Logic',logicSummary:'How is the Health Score calculated?',
+    navAi:'AI Recommend',aiTitle:'AI Recommend',aiInterpTitle:'Interpretation of recent activities',aiRecoTitle:'AI Recommendations',
+    aiGenerate:'Generate AI Analysis',aiWait:'Analyzing...',aiNoKey:'Please enter OpenAI API key in Settings first.',
+    logicContent:`<p style="margin-bottom:8px">The Health Score (out of 100) is calculated based on the following:</p>
+      <ul style="padding-left:16px;margin-bottom:12px">
+        <li><b>Sleep (20 pts):</b> 7-9 hours optimal. Penalized for too little or too much. (Sleep Foundation)</li>
+        <li><b>Gen. Activity (20 pts):</b> 30+ minutes optimal. (WHO Guidelines)</li>
+        <li><b>Hydration (15 pts):</b> 2000ml+ optimal. (Average adult recommendation)</li>
+        <li><b>Stress (15 pts):</b> 'Low' gets full points, 'Med' gets half, 'High' gets 0.</li>
+        <li><b>Diet (15 pts):</b> 'Good' gets full points, 'Fair' gets half, 'Poor' gets 0.</li>
+        <li><b>BMI (15 pts):</b> Normal range (18.5-24.9) gets full points. (WHO Body Mass Index)</li>
+      </ul>
+      <p><b>Penalties:</b></p>
+      <ul style="padding-left:16px">
+        <li><b>Alcohol:</b> >100ml pure alcohol intake reduces overall score by 30%.</li>
+        <li><b>Smoking:</b> Reduces overall score by 10% (penalty is waived after 30 consecutive smoke-free days).</li>
+      </ul>`
+  }
+};
+let lang='ko';
+function t(k){return T[lang][k]??k}
+
+// ── Storage ──
+let DB={records:{},settings:{name:'',height:'',lang:'ko',order:null,theme:'auto',openaiKey:''}};
+function loadDB(){try{const d=localStorage.getItem('ht2');if(d)DB=JSON.parse(d)}catch(e){}}
+function saveDB(){try{localStorage.setItem('ht2',JSON.stringify(DB))}catch(e){}}
+function today(){
+  const d=new Date();
+  return new Date(d.getTime()-(d.getTimezoneOffset()*60000)).toISOString().split('T')[0];
+}
+
+function applyTheme(th){
+  document.documentElement.classList.remove('force-light','force-dark');
+  if(th==='dark')document.documentElement.classList.add('force-dark');
+  else if(th==='light')document.documentElement.classList.add('force-light');
+}
+
+// ── Metrics config ──
+const METRICS_DEF=[
+  {id:'weight',icon:'⚖️',color:'#0A84FF',unit:()=>t('weightUnit'),type:'number',min:20,max:300,step:.1,ph:()=>`0 ${t('weightUnit')}`},
+  {id:'sleep',icon:'🛌',color:'#5E5CE6',unit:()=>t('sleepUnit'),type:'number',min:0,max:24,step:.5,ph:()=>`0 ${t('sleepUnit')}`},
+  {id:'exercise',icon:'🏃',color:'#30D158',unit:()=>t('exUnit'),type:'number',min:0,max:300,step:1,ph:()=>`0 ${t('exUnit')}`},
+  {id:'meal',icon:'🍽️',color:'#FF9F0A',type:'toggle3',opts:()=>[t('mealBad'),t('mealNeutral'),t('mealGood')],vals:['bad','neutral','good']},
+  {id:'water',icon:'💧',color:'#32ADE6',unit:()=>t('waterUnit'),type:'number',min:0,max:5000,step:50,ph:()=>`0 ${t('waterUnit')}`},
+  {id:'stress',icon:'🧘',color:'#BF5AF2',type:'toggle3',opts:()=>[t('stressLow'),t('stressMid'),t('stressHigh')],vals:['low','mid','high']},
+  {id:'coffee',icon:'☕',color:'#AC8E68',unit:()=>t('coffeeUnit'),type:'number',min:0,max:2000,step:50,ph:()=>`0 ${t('coffeeUnit')}`},
+  {id:'alcohol',icon:'🍺',color:'#FF6961',unit:()=>t('alcoholUnit'),type:'number',min:0,max:2000,step:50,extra:'alcType',extraOpts:()=>[t('beer'),t('wine'),t('soju'),t('spirits'),t('other')],extraVals:['beer','wine','soju','spirits','other'],ph:()=>`0 ${t('alcoholUnit')}`},
+  {id:'smoking',icon:'🚬',color:'#FF453A',type:'toggle2',opts:()=>[t('yes'),t('no')],vals:['yes','no']},
+];
+
+// metric ORDER (draggable)
+let metricOrder=null; // array of ids
+function getOrder(){
+  if(metricOrder&&metricOrder.length===METRICS_DEF.length)return metricOrder;
+  return METRICS_DEF.map(m=>m.id);
+}
+function getMETRICS(){return getOrder().map(id=>METRICS_DEF.find(m=>m.id===id)).filter(Boolean);}
+
+// ── Score ──
+function calcScore(rec){
+  if(!rec||Object.keys(rec).length===0)return null;
+  let pts=0,max=0;
+  function add(score,weight){pts+=score*weight;max+=weight;}
+  if(rec.sleep!=null){const s=parseFloat(rec.sleep);let sc=s>=7&&s<=9?1:s<7?s/7:s>9?(1-(s-9)/6):0;add(Math.max(0,Math.min(1,sc)),20);}
+  if(rec.exercise!=null){add(Math.min(1,parseFloat(rec.exercise)/30),20);}
+  if(rec.water!=null){add(Math.min(1,parseFloat(rec.water)/2000),15);}
+  if(rec.stress!=null){const sm={low:1,mid:0.5,high:0};add(sm[rec.stress]??0.5,15);}
+  if(rec.meal!=null){const mm={good:1,neutral:0.5,bad:0};add(mm[rec.meal]??0.5,15);}
+  const h=parseFloat(DB.settings.height);
+  if(rec.weight&&h>0){const bmi=parseFloat(rec.weight)/((h/100)**2);let sc=bmi>=18.5&&bmi<=24.9?1:bmi<18.5?bmi/18.5:(1-(bmi-24.9)/15);add(Math.max(0,Math.min(1,sc)),15);}
+  if(max===0)return null;
+  let score=Math.round((pts/max)*100);
+  if(rec.alcohol&&parseFloat(rec.alcohol)>100){score=Math.round(score*.70);}
+  if(rec.smoking==='yes'){
+    const dates=Object.keys(DB.records).sort().reverse();
+    let streak=0;
+    for(const d of dates){if(DB.records[d].smoking==='yes'&&d<today())break;if(DB.records[d].smoking==='no')streak++;else break;}
+    if(streak<30)score=Math.round(score*.90);
+  }
+  return Math.max(0,Math.min(100,score));
+}
+function scoreGrade(s){if(s===null)return'';if(s>=85)return t('gradeAwesome');if(s>=65)return t('gradeGood');if(s>=45)return t('gradeOk');return t('gradeLow');}
+function scoreColor(s){if(s===null)return'var(--accent)';if(s>=75)return'#30D158';if(s>=50)return'#FF9F0A';return'#FF453A';}
+
+// ── Date label ──
+function fmtDate(d){
+  // d: Date object or today
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const daysko=['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthsko=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const wd=d.getDay();
+  if(lang==='en')return`${days[wd]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  return`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${daysko[wd]}`;
+}
+
+// ── Render Home ──
+function renderHome(){
+  const h=new Date().getHours();
+  const gKey=h<12?'morning':h<18?'afternoon':'evening';
+  const name=DB.settings.name;
+  document.getElementById('greeting').textContent=t(gKey)+(name?`, ${name}!`:'!');
+  document.getElementById('home-title').textContent=t('home');
+  document.getElementById('home-date').textContent=fmtDate(new Date());
+  document.getElementById('metrics-title').textContent=t('metricsTitle');
+  document.getElementById('score-lbl').textContent=t('scoreLabel');
+  const rec=DB.records[today()]||{};
+  const score=calcScore(rec);
+  const num=document.getElementById('score-num');
+  const ring=document.getElementById('ring-fill');
+  const grade=document.getElementById('score-grade');
+  if(score!==null){
+    num.textContent=score;
+    const circ=2*Math.PI*80;
+    ring.style.strokeDashoffset=circ-(circ*score/100);
+    ring.style.stroke=scoreColor(score);
+    grade.textContent=scoreGrade(score);
+  } else {
+    num.textContent='–';ring.style.strokeDashoffset=502;grade.textContent='';
+    ring.style.stroke='var(--accent)';
+  }
+  const bd=document.getElementById('score-breakdown');
+  bd.innerHTML='';
+  getMETRICS().forEach(m=>{
+    const v=rec[m.id];if(v==null)return;
+    const chip=document.createElement('div');chip.className='chip';
+    let label=m.id==='meal'?t('meal')+': '+(t('meal'+v[0].toUpperCase()+v.slice(1))||v)
+      :m.id==='stress'?t('stress')+': '+(t('stress'+v[0].toUpperCase()+v.slice(1))||v)
+      :m.id==='smoking'?t('smoking')+': '+(v==='yes'?t('yes'):t('no'))
+      :t(m.id)+': '+v+(m.unit?m.unit():'');
+    chip.textContent=label;bd.appendChild(chip);
+  });
+  const cards=document.getElementById('metric-cards');
+  cards.innerHTML='';
+  getMETRICS().forEach(m=>cards.appendChild(buildCard(m,rec)));
+  initDrag();
+}
+
+function buildCard(m,rec){
+  const card=document.createElement('div');card.className='card';card.dataset.id=m.id;
+  const row=document.createElement('div');row.className='metric-row';
+  // drag handle
+  const handle=document.createElement('div');handle.className='drag-handle';handle.textContent='≡';
+  handle.setAttribute('draggable','false');
+  // tap area
+  const tap=document.createElement('div');tap.className='row-tap';
+  tap.innerHTML=`<div class="metric-icon" style="background:${m.color}22">${m.icon}</div>
+  <div class="metric-info">
+    <div class="metric-name">${t(m.id)}</div>
+    <div class="metric-val" id="val-${m.id}">${fmtVal(m,rec)}</div>
+  </div><div class="metric-arrow">›</div>`;
+  const form=buildForm(m,rec);
+  tap.onclick=()=>{
+    // close others
+    document.querySelectorAll('.metric-form.open').forEach(f=>{if(f!==form)f.classList.remove('open');});
+    form.classList.toggle('open');
+  };
+  row.appendChild(handle);row.appendChild(tap);
+  card.appendChild(row);card.appendChild(form);
+  return card;
+}
+
+function fmtVal(m,rec){
+  const v=rec[m.id];
+  if(v==null){return`<span style="color:var(--sub)">–</span>`;}
+  if(m.type==='toggle2'){return v==='yes'?t('yes'):t('no');}
+  if(m.type==='toggle3'){const i=m.vals.indexOf(v);return i>=0?(m.opts()[i]):v;}
+  let s=v+(m.unit?m.unit():'');
+  if(m.extra&&rec[m.id+'_type']&&v!==0){
+    const tv=rec[m.id+'_type'];
+    const idx=m.extraVals?m.extraVals.indexOf(tv):-1;
+    const tl=idx>=0?m.extraOpts()[idx]:tv;
+    s+=` (${tl})`;
+  }
+  return s;
+}
+
+function buildForm(m,rec){
+  const form=document.createElement('div');form.className='metric-form';form.id='form-'+m.id;
+  let html='';
+  if(m.type==='number'){
+    const ph=m.ph?m.ph():'0';
+    const initV=rec[m.id]??'';
+    if(m.extra==='alcType'){
+      html+=`<label>${t(m.id)}</label>
+      <input type="number" id="inp-${m.id}" value="${initV}" min="${m.min}" max="${m.max}" step="${m.step}" placeholder="${ph}" oninput="document.getElementById('alc-type-wrap').style.display=(this.value>0?'block':'none')">`;
+      const showSel = initV>0;
+      html+=`<div id="alc-type-wrap" style="display:${showSel?'block':'none'}"><label>${t('alcType')}</label><select id="inp-${m.id}_type">`;
+      m.extraOpts().forEach((o,i)=>html+=`<option value="${m.extraVals[i]}" ${rec[m.id+'_type']===m.extraVals[i]?'selected':''}>${o}</option>`);
+      html+=`</select></div>`;
+    } else {
+      html+=`<label>${t(m.id)}</label>
+      <input type="number" id="inp-${m.id}" value="${initV}" min="${m.min}" max="${m.max}" step="${m.step}" placeholder="${ph}">`;
+    }
+  } else if(m.type==='toggle3'||m.type==='toggle2'){
+    html+=`<div class="toggle-group">`;
+    m.opts().forEach((o,i)=>html+=`<button class="toggle-btn${rec[m.id]===m.vals[i]?' active':''}" onclick="toggleSel(this,'${m.id}','${m.vals[i]}')">${o}</button>`);
+    html+=`</div>`;
+  }
+  html+=`<button class="save-btn" onclick="saveMetric('${m.id}')">${t('save')}</button>`;
+  form.innerHTML=html;return form;
+}
+
+window.toggleSel=function(btn,id,val){
+  const group=btn.closest('.toggle-group');
+  group.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const rec=DB.records[today()]||{};
+  rec[id]=val;DB.records[today()]=rec;saveDB();
+  document.getElementById('val-'+id).innerHTML=fmtVal(METRICS_DEF.find(x=>x.id===id),rec);
+  updateRing();
+};
+
+window.saveMetric=function(id){
+  const m=METRICS_DEF.find(x=>x.id===id);
+  const rec=DB.records[today()]||{};
+  if(m.type==='number'){
+    const v=document.getElementById('inp-'+id)?.value;
+    const te=document.getElementById('inp-'+id+'_type');
+    if(te)rec[id+'_type']=te.value;
+    if(v!==''){
+      let val=parseFloat(v);
+      if(id==='alcohol'&&te){
+        const type=te.value;
+        let pct=0.10; // default for 'other'
+        if(type==='beer')pct=0.05;
+        else if(type==='wine')pct=0.14;
+        else if(type==='soju')pct=0.16;
+        else if(type==='spirits')pct=0.40;
+        val=val*pct;
+      }
+      rec[id]=Math.round(val*10)/10; // round to 1 decimal
+    }
+  }
+  DB.records[today()]=rec;saveDB();
+  document.getElementById('val-'+id).innerHTML=fmtVal(m,rec);
+  document.getElementById('form-'+id).classList.remove('open');
+  updateRing();
+};
+
+function updateRing(){
+  const rec=DB.records[today()]||{};
+  const score=calcScore(rec);
+  const ring=document.getElementById('ring-fill');
+  const num=document.getElementById('score-num');
+  const grade=document.getElementById('score-grade');
+  if(score!==null){
+    const circ=2*Math.PI*80;
+    ring.style.strokeDashoffset=circ-(circ*score/100);
+    ring.style.stroke=scoreColor(score);
+    num.textContent=score;grade.textContent=scoreGrade(score);
+  }
+}
+
+// ── Drag to Reorder (FLIP — smooth push animation) ──
+function initDrag(){
+  const container=document.getElementById('metric-cards');
+  let dragged=null;
+
+  container.querySelectorAll('.drag-handle').forEach(handle=>{
+    handle.addEventListener('mousedown',startDrag);
+    handle.addEventListener('touchstart',startDrag,{passive:false});
+  });
+
+  function getCard(el){return el.closest('.card');}
+
+  function startDrag(e){
+    e.preventDefault();
+    dragged=getCard(e.currentTarget);
+    dragged.classList.add('dragging');
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('mouseup',endDrag);
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('touchend',endDrag);
+  }
+
+  function onMove(e){
+    if(!dragged)return;
+    e.preventDefault();
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    const otherCards=[...container.querySelectorAll('.card:not(.dragging)')];
+
+    // ── FLIP step 1: record current top positions before DOM change ──
+    const before=new Map();
+    [...container.querySelectorAll('.card')].forEach(c=>before.set(c,c.getBoundingClientRect().top));
+
+    // ── Determine insert target & reorder DOM ──
+    let target=null;
+    for(const c of otherCards){
+      const r=c.getBoundingClientRect();
+      if(cy<r.top+r.height/2){target=c;break;}
+    }
+    const prevSibling=dragged.previousElementSibling;
+    const prevNext=dragged.nextElementSibling;
+    if(target&&target!==dragged)container.insertBefore(dragged,target);
+    else if(!target)container.appendChild(dragged);
+
+    // ── FLIP step 2: for every NON-dragged card that moved, animate from old → new ──
+    [...container.querySelectorAll('.card:not(.dragging)')].forEach(c=>{
+      const oldTop=before.get(c);
+      if(oldTop==null)return;
+      const newTop=c.getBoundingClientRect().top;
+      const delta=oldTop-newTop;
+      if(Math.abs(delta)<1)return;
+
+      // snap card back to old visual position instantly (no transition)
+      c.style.transition='none';
+      c.style.transform=`translateY(${delta}px)`;
+      // force reflow so the browser registers the snap
+      c.getBoundingClientRect();
+      // then animate smoothly to rest position
+      c.style.transition='transform 0.22s cubic-bezier(0.4,0,0.2,1)';
+      c.style.transform='';
+    });
+  }
+
+  function endDrag(){
+    if(!dragged)return;
+    dragged.classList.remove('dragging');
+    // clear any lingering transforms
+    container.querySelectorAll('.card').forEach(c=>{
+      c.style.transition='';
+      c.style.transform='';
+    });
+    metricOrder=[...container.querySelectorAll('.card')].map(c=>c.dataset.id);
+    DB.settings.order=metricOrder;saveDB();
+    dragged=null;
+    if(document.getElementById('page-charts').classList.contains('active'))renderCharts();
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('mouseup',endDrag);
+    document.removeEventListener('touchmove',onMove);
+    document.removeEventListener('touchend',endDrag);
+  }
+}
+
+// ── Records (editable) ──
+// Track the currently active edit row for the global lock
+let activeEditRow=null;
+
+function renderRecords(){
+  document.getElementById('records-title').textContent=t('records');
+  const list=document.getElementById('records-list');
+  const currentToday=today();
+  if(!DB.records[currentToday]) DB.records[currentToday]={};
+  const dates=Object.keys(DB.records).sort().reverse();
+  if(!dates.length){
+    list.innerHTML=`<p class="empty">${t('noRecords')}</p>`;
+    return;
+  }
+  list.innerHTML='';
+  dates.forEach(d=>{
+    const rec=DB.records[d];
+    const score=calcScore(rec);
+    const div=document.createElement('div');div.className='rec-day';
+    const sc=score!==null?`<div style="margin-bottom:8px" id="score-wrap-${d}"><span class="chip ${score>=65?'good':score>=40?'warn':'bad'}">${score}점</span></div>`:`<div style="margin-bottom:8px" id="score-wrap-${d}"></div>`;
+
+    // Use main-page metric order; split first 5 → col1, rest → col2
+    const ordered=getMETRICS(); // Removed .filter(..., null) to show all items
+    const col1=ordered.slice(0,5);
+    const col2=ordered.slice(5);
+
+    function mkField(m){
+      let lbl=fmtVal(m,rec);
+      return `<div class="rec-field" onclick="editRecField(event)" data-date="${d}" data-id="${m.id}" style="cursor:pointer">
+        <span class="rec-field-icon">${m.icon}</span>
+        <span class="rec-field-name">${t(m.id)}</span>
+        <span class="rec-field-val" id="rfv-${d}-${m.id}">${lbl}</span>
+      </div>`;
+    }
+
+    // Build 2-column grid: wrap col1 and col2 in separate divs
+    const c1Html=col1.map(mkField).join('');
+    const c2Html=col2.map(mkField).join('');
+    const gridHtml=`<div class="rec-grid">
+      <div class="rec-col">${c1Html}</div>
+      <div class="rec-col">${c2Html}</div>
+    </div>`;
+
+    div.innerHTML=`<div class="rec-date">${d}</div>${sc}${gridHtml}`;
+    list.appendChild(div);
+  });
+}
+
+window.editRecField=function(e){
+  e.stopPropagation();
+  const row=e.currentTarget;
+
+  // ── Fix 4: global edit lock ──
+  // If another row is being edited, ignore this click
+  if(activeEditRow&&activeEditRow!==row)return;
+
+  const date=row.dataset.date;
+  const id=row.dataset.id;
+  const m=METRICS_DEF.find(x=>x.id===id);
+  const rec=DB.records[date]||{};
+  const valEl=document.getElementById(`rfv-${date}-${id}`);
+
+  // already editing this row — ignore
+  if(row.querySelector('.rec-field-input,.rec-field-toggle'))return;
+
+  activeEditRow=row;
+  valEl.style.display='none';
+
+  if(m.type==='number'){
+    const wrap=document.createElement('div');
+    wrap.style.cssText='display:flex;gap:4px;flex:1;justify-content:flex-end;align-items:center;';
+
+    const input=document.createElement('input');
+    input.className='rec-field-input';
+    input.type='number';input.value=rec[id]??'';input.step=m.step;
+    input.min=m.min;input.max=m.max;
+    input.style.fontSize='16px'; // prevents iOS auto-zoom
+    input.style.width='auto';
+    input.style.minWidth='60px';
+    wrap.appendChild(input);
+
+    let sel=null;
+    if(m.extra==='alcType'){
+      sel=document.createElement('select');
+      sel.style.cssText='font-size:12px;border-radius:6px;border:1px solid var(--sep);background:var(--card2);color:var(--text);padding:2px;';
+      m.extraOpts().forEach((o,i)=>{
+        const opt=document.createElement('option');
+        opt.value=m.extraVals[i]; opt.textContent=o;
+        if(rec[id+'_type']===m.extraVals[i]) opt.selected=true;
+        sel.appendChild(opt);
+      });
+      wrap.appendChild(sel);
+    }
+
+    function done(){
+      if(m.extra==='alcType'&&sel) rec[id+'_type']=sel.value;
+      commitEdit(date,id,m,input,valEl,null);
+      wrap.remove(); // we appended `wrap` this time
+      activeEditRow=null;
+    }
+
+    wrap.addEventListener('focusout', (e) => {
+      setTimeout(()=>{if(!wrap.contains(document.activeElement)) done();}, 10);
+    });
+
+    input.onkeydown=ev=>{
+      if(ev.key==='Enter')done();
+      if(ev.key==='Escape'){valEl.style.display='';wrap.remove();activeEditRow=null;}
+    };
+    if(sel){
+      sel.onkeydown=input.onkeydown;
+      sel.onchange=()=>{input.focus();};
+    }
+
+    row.appendChild(wrap);
+    // ── Fix 1: focus immediately (no delay) so iOS keyboard pops up ──
+    input.focus();
+    input.select();
+
+  } else if(m.type==='toggle3'||m.type==='toggle2'){
+    const wrap=document.createElement('div');wrap.className='rec-field-toggle';
+    wrap.style.cssText='display:flex;flex-direction:column;gap:3px;margin-top:4px;width:100%;';
+
+    // ── Fix 3: reversed order for toggle options ──
+    // good→neutral→bad / high→mid→low shown top-to-bottom
+    const reversedOpts=[...m.opts()].reverse();
+    const reversedVals=[...m.vals].reverse();
+
+    reversedOpts.forEach((o,i)=>{
+      const val=reversedVals[i];
+      const btn=document.createElement('button');
+      btn.className='toggle-btn'+(rec[id]===val?' active':'');
+      btn.style.cssText='font-size:12px;padding:5px 8px;font-family:inherit;text-align:center;width:100%;';
+      btn.textContent=o;
+      btn.onclick=ev=>{
+        ev.stopPropagation();
+        rec[id]=val;DB.records[date]=rec;saveDB();
+        valEl.textContent=m.opts()[m.vals.indexOf(val)]||val;
+        valEl.style.display='';wrap.remove();activeEditRow=null;
+        
+        // update score instantly
+        const nw=calcScore(rec);
+        const sWrap=document.getElementById(`score-wrap-${date}`);
+        if(sWrap){sWrap.innerHTML=nw!==null?`<span class="chip ${nw>=65?'good':nw>=40?'warn':'bad'}">${nw}점</span>`:``;}
+      };
+      wrap.appendChild(btn);
+    });
+    row.appendChild(wrap);
+  }
+};
+
+function commitEdit(date,id,m,input,valEl,editBtn){
+  const rec=DB.records[date]||{};
+  const raw=typeof input==='string'?input:input.value;
+  if(raw!==''&&raw!=null){
+    const v=parseFloat(raw);
+    if(!isNaN(v))rec[id]=v;
+  }
+  DB.records[date]=rec;saveDB();
+  // restore display label
+  valEl.innerHTML=fmtVal(m,rec);
+  valEl.style.display='';
+  if(typeof input!=='string'){const el=input;setTimeout(()=>el.remove(),0);}
+  if(editBtn){editBtn.style.display='';}
+
+  // update score instantly
+  const nw=calcScore(rec);
+  const sWrap=document.getElementById(`score-wrap-${date}`);
+  if(sWrap){sWrap.innerHTML=nw!==null?`<span class="chip ${nw>=65?'good':nw>=40?'warn':'bad'}">${nw}점</span>`:``;}
+}
+
+// ── Charts ──
+let currentScale='1W';
+window.setScale=function(scale){
+  currentScale=scale;
+  document.querySelectorAll('.scale-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderCharts();
+};
+function getDays(scale){return scale==='1W'?7:scale==='1M'?30:scale==='3M'?90:365;}
+
+// min px per data-point for scrollable canvas (now dynamic in drawChart)
+function renderCharts(){
+  document.getElementById('charts-title').textContent=t('charts');
+  const container=document.getElementById('charts-list');container.innerHTML='';
+  const days=getDays(currentScale);
+  const end=new Date();const dates=[];
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(end);
+    d.setDate(d.getDate()-i);
+    dates.push(new Date(d.getTime()-(d.getTimezoneOffset()*60000)).toISOString().split('T')[0]);
+  }
+
+  // ── 1. PINNED score bar chart (always at top, not reorderable) ──
+  const scoreVals=dates.map(d=>{const r=DB.records[d];return r?calcScore(r):null;});
+  if(scoreVals.some(v=>v!==null)){
+    appendChart(container,'🏆 '+t('scoreLabel'),scoreVals,dates,'#30D158',{yMin:0,yMax:100,chartType:'bar'},110,true);
+  }
+
+  // ── 2. Metric charts in drag order (line charts) ──
+  getMETRICS().forEach(m=>{
+    if(m.type==='number'){
+      const vals=dates.map(d=>{const v=DB.records[d]?.[m.id];return v!=null?parseFloat(v):null;});
+      if(vals.every(v=>v===null))return;
+      appendChart(container,`${m.icon} ${t(m.id)}${m.unit?' ('+m.unit()+')':''}`,vals,dates,m.color,{clampZero: m.min >= 0},120,false);
+    } else if(m.type==='toggle3'){
+      const vals=dates.map(d=>{const v=DB.records[d]?.[m.id];return v!=null?m.vals.indexOf(v):null;});
+      if(vals.every(v=>v===null))return;
+      appendChart(container,`${m.icon} ${t(m.id)}`,vals,dates,m.color,
+        {yMin:0,yMax:2,ySteps:2,labels:{0:m.opts()[0],1:m.opts()[1],2:m.opts()[2]}},100,false);
+    }
+  });
+}
+
+function appendChart(container,title,vals,dates,color,opts,h,pinned){
+  const card=document.createElement('div');
+  card.className='chart-card'+(pinned?' pinned':'');
+
+  const titleEl=document.createElement('div');titleEl.className='chart-title';titleEl.textContent=title;
+  card.appendChild(titleEl);
+
+  const wrap=document.createElement('div');
+  wrap.style.cssText='position:relative;display:block;width:100%;';
+
+  const overlayCanvas=document.createElement('canvas');
+  overlayCanvas.style.cssText='position:absolute;left:0;top:0;width:100%;height:'+h+'px;pointer-events:none;z-index:10;display:block;';
+  wrap.appendChild(overlayCanvas);
+
+  const scroll=document.createElement('div');
+  scroll.className='chart-scroll';
+  scroll.style.cssText='overflow-x:auto;position:relative;z-index:5;';
+
+  const canvas=document.createElement('canvas');canvas.height=h;
+  canvas.style.display='block';
+  scroll.appendChild(canvas);
+
+  wrap.appendChild(scroll);
+  card.appendChild(wrap);
+  container.appendChild(card);
+  requestAnimationFrame(()=>drawChart(canvas,overlayCanvas,vals,dates,color,opts,h,scroll));
+}
+
+function drawChart(canvas,oCanvas,vals,dates,color,opts,H,scrollWrap){
+  const dpr=window.devicePixelRatio||1;
+  const containerW=scrollWrap.parentElement.clientWidth||300;
+  let ptW=40;
+  if(vals.length>100) ptW=2; // 1Y
+  else if(vals.length>40) ptW=5; // 3M
+  else if(vals.length>10) ptW=14; // 1M
+  
+  const pad={t:8,r:12,b:32,l:44};
+  const minW=vals.length*ptW + pad.l + pad.r;
+  const W=Math.max(containerW,minW);
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  scrollWrap.style.maxWidth='100%';
+
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+
+  oCanvas.width=containerW*dpr;oCanvas.height=H*dpr;
+  const oCtx=oCanvas.getContext('2d');oCtx.scale(dpr,dpr);
+
+  const forceDark=document.documentElement.classList.contains('force-dark');
+  const forceLight=document.documentElement.classList.contains('force-light');
+  const isDark=forceDark||((!forceLight)&&matchMedia('(prefers-color-scheme:dark)').matches);
+  const textClr=isDark?'rgba(255,255,255,.55)':'rgba(30,30,30,.75)';
+  const gridClr=isDark?'rgba(255,255,255,.08)':'rgba(30,30,30,.15)';
+  const cardColor=getComputedStyle(document.documentElement).getPropertyValue('--card').trim()||(isDark?'#1C1C1E':'#FFF');
+
+  const nonNull=vals.filter(v=>v!==null);
+  if(!nonNull.length){ctx.fillStyle=textClr;ctx.textAlign='center';ctx.font='13px -apple-system';ctx.fillText(t('noData'),W/2,H/2);return;}
+
+  let yMin,yMax;
+  if(opts.yMin!=null&&opts.yMax!=null){
+    yMin=opts.yMin;yMax=opts.yMax;
+  } else {
+    const dataMin=Math.min(...nonNull),dataMax=Math.max(...nonNull);
+    const dataPad=(dataMax-dataMin)||Math.max(dataMax*0.2,1);
+    yMin=dataMin-dataPad*0.4;
+    yMax=dataMax+dataPad*0.4;
+    if(opts.clampZero && yMin < 0) {
+      yMin = 0;
+    }
+  }
+  const range=yMax-yMin||1;
+  const toX=i=>pad.l+(i/(vals.length-1||1))*cw;
+  const toY=v=>pad.t+ch-(v-yMin)/range*ch;
+
+  // Solid left side mask for sticky Y-axis
+  oCtx.fillStyle=cardColor;
+  oCtx.fillRect(0,0,pad.l,H);
+
+  // Overlay Grid (fixed)
+  oCtx.strokeStyle=gridClr;oCtx.lineWidth=1;
+  oCtx.setLineDash([4, 4]);
+  const steps=opts.ySteps??4;
+  for(let g=0;g<=steps;g++){const y=pad.t+ch*g/steps;oCtx.beginPath();oCtx.moveTo(pad.l,y);oCtx.lineTo(containerW,y);oCtx.stroke();}
+  oCtx.setLineDash([]);
+  
+  // Overlay Y-Labels
+  oCtx.fillStyle=textClr;oCtx.font=`10px -apple-system`;oCtx.textAlign='right';
+  for(let g=0;g<=steps;g++){
+    const v=yMax-range*g/steps;const y=pad.t+ch*g/steps;
+    let rounded=Math.round(v*10)/10;
+    let lbl=opts.labels?opts.labels[Math.round(v)]??'':(Number.isInteger(rounded)?rounded.toString():rounded.toFixed(1));
+    oCtx.fillText(lbl,pad.l-4,y+4);
+  }
+
+  // x labels
+  ctx.textAlign='center';
+  const step=Math.max(1,Math.ceil(vals.length/8));
+  dates.forEach((d,i)=>{
+    if(i%step===0||i===vals.length-1){
+      const parts=d.split('-');ctx.fillStyle=textClr;
+      ctx.fillText(parts[1]+'/'+parts[2],toX(i),H-8);
+    }
+  });
+
+    if(opts.chartType==='bar'){
+    // BAR chart — Apple Health style with rounded top corners
+    const slotW=cw/(vals.length||1);
+    const barW=Math.max(2,slotW*0.7);
+    const baseline=toY(yMin);
+    vals.forEach((v,i)=>{
+      if(v===null)return;
+      const x=toX(i);const y=toY(v);
+      const bColor=v>=75?'#30D158':v>=50?'#FF9F0A':'#FF453A';
+      ctx.fillStyle=bColor;
+      // rounded top corners
+      const r=Math.min(barW/2, 4);
+      ctx.beginPath();
+      ctx.moveTo(x-barW/2, baseline);
+      ctx.lineTo(x-barW/2, Math.max(y+r, y)); 
+      if(baseline-y > r) {
+        ctx.quadraticCurveTo(x-barW/2, y, x-barW/2+r, y);
+        ctx.lineTo(x+barW/2-r, y);
+        ctx.quadraticCurveTo(x+barW/2, y, x+barW/2, y+r);
+      }
+      ctx.lineTo(x+barW/2, baseline);
+      ctx.closePath();
+      ctx.fill();
+      // value label
+      if(barW>14){
+        ctx.fillStyle=isDark?'rgba(255,255,255,.7)':'rgba(0,0,0,.5)';
+        ctx.font=`bold 9px -apple-system`;ctx.textAlign='center';
+        ctx.fillText(Math.round(v),x,y-5);
+      }
+    });
+  } else {
+    // LINE chart — Apple Health style (thick lines, gradient fill, single focus dot)
+    const grad=ctx.createLinearGradient(0,pad.t,0,pad.t+ch);
+    grad.addColorStop(0,color+'40');grad.addColorStop(1,color+'00');
+    ctx.beginPath();let started=false;
+    vals.forEach((v,i)=>{if(v===null)return;const x=toX(i),y=toY(v);if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);});
+    const lastI=vals.map((v,i)=>v!==null?i:-1).filter(i=>i>=0).pop();
+    const firstI=vals.findIndex(v=>v!==null);
+    if(firstI>=0){ctx.lineTo(toX(lastI),pad.t+ch);ctx.lineTo(toX(firstI),pad.t+ch);ctx.closePath();ctx.fillStyle=grad;ctx.fill();}
+    ctx.beginPath();started=false;
+    ctx.strokeStyle=color;ctx.lineWidth=3.5;ctx.lineJoin='round';ctx.lineCap='round';
+    vals.forEach((v,i)=>{if(v===null)return;const x=toX(i),y=toY(v);if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);});
+    ctx.stroke();
+    // Only put a dot on the very last (most recent) data point
+    if(lastI>=0){
+      const v=vals[lastI];
+      ctx.beginPath();ctx.arc(toX(lastI),toY(v),4.5,0,Math.PI*2);
+      ctx.fillStyle=isDark?'#1C1C1E':'#fff';ctx.fill();
+      ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.stroke();
+    }
+  }
+
+  scrollWrap.scrollLeft=scrollWrap.scrollWidth;
+}
+
+// ── Settings ──
+function renderSettings(){
+  document.getElementById('settings-title').textContent=t('settings');
+  document.getElementById('profile-title').textContent=t('profile');
+  document.getElementById('prefs-title').textContent=t('prefs');
+  document.getElementById('data-title').textContent=t('data');
+  document.getElementById('lbl-name').textContent=t('name');
+  document.getElementById('lbl-height').textContent=t('height');
+  if(document.getElementById('lbl-apikey')) document.getElementById('lbl-apikey').textContent='OpenAI API Key';
+  document.getElementById('lbl-lang').textContent=t('lang');
+  document.getElementById('lbl-theme').textContent=t('theme');
+  document.getElementById('btn-export').textContent=t('export');
+  document.getElementById('btn-reset').textContent=t('reset');
+  document.getElementById('set-name').value=DB.settings.name||'';
+  document.getElementById('set-height').value=DB.settings.height||'';
+  if(document.getElementById('set-apikey')) document.getElementById('set-apikey').value=DB.settings.openaiKey||'';
+  document.getElementById('lang-toggle').checked=lang==='en';
+  document.getElementById('lang-label').textContent=lang==='ko'?'KO':'EN';
+  // update 3-button theme selector
+  const th=DB.settings.theme||'auto';
+  ['auto','dark','light'].forEach(v=>{
+    const btn=document.getElementById('tseg-'+v);
+    if(btn){btn.textContent=t('theme'+v.charAt(0).toUpperCase()+v.slice(1));btn.classList.toggle('active',th===v);}
+  });
+  
+  const lc=document.getElementById('logic-title');
+  if(lc){
+    lc.textContent=lang==='en'?t('logicTitle'):'점수 계산 방식';
+    document.getElementById('logic-summary').textContent=lang==='en'?t('logicSummary'):'건강 점수는 어떻게 계산되나요?';
+    if(lang==='en') document.getElementById('logic-content').innerHTML=t('logicContent');
+    else document.getElementById('logic-content').innerHTML=`
+      <p style="margin-bottom:8px">건강 점수(100점 만점)는 다음 항목들을 종합하여 계산됩니다:</p>
+      <ul style="padding-left:16px;margin-bottom:12px">
+        <li><b>수면 (20점):</b> 7~9시간 수면 시 만점. 부족하거나 과수면 시 감점. (수면 재단 권장량)</li>
+        <li><b>운동 (20점):</b> 30분 이상 시 만점. (WHO 권장 일일 활동량)</li>
+        <li><b>수분 (15점):</b> 2000ml 이상 시 만점. (성인 평균 권장 수분 섭취량)</li>
+        <li><b>스트레스 (15점):</b> '낮음' 시 만점, '중간' 7.5점, '높음' 0점.</li>
+        <li><b>식단 (15점):</b> '좋음' 시 만점, '보통' 7.5점, '나쁨' 0점.</li>
+        <li><b>체질량지수/BMI (15점):</b> BMI 18.5~24.9 (정상 체중) 범위일 때 만점. (대한비만학회 기준)</li>
+      </ul>
+      <p><b>감점 요소 (페널티):</b></p>
+      <ul style="padding-left:16px">
+        <li><b>음주:</b> 순수 알코올 섭취량이 100ml 초과 시, 총점의 30% 감점.</li>
+        <li><b>흡연:</b> 흡연 시 총점의 10% 감점 (단, 30일 이상 연속 금연 성공 시 감점 면제).</li>
+      </ul>`;
+  }
+}
+document.getElementById('set-name').addEventListener('change',e=>{DB.settings.name=e.target.value;saveDB();renderHome();});
+document.getElementById('set-height').addEventListener('change',e=>{DB.settings.height=e.target.value;saveDB();});
+
+if(document.getElementById('set-apikey')) document.getElementById('set-apikey').addEventListener('change',e=>{DB.settings.openaiKey=e.target.value;saveDB();});
+
+// ── AI ──
+function renderAi(){
+  document.getElementById('ai-title').textContent=t('aiTitle');
+  document.getElementById('ai-interp-title').textContent=t('aiInterpTitle');
+  document.getElementById('ai-reco-title').textContent=t('aiRecoTitle');
+  document.getElementById('btn-generate-ai').textContent=t('aiGenerate');
+}
+
+async function generateAI(){
+  const apiKey = DB.settings.openaiKey;
+  if(!apiKey){
+    alert(t('aiNoKey'));
+    switchTab('settings');
+    setTimeout(()=>{
+      const keyEl=document.getElementById('set-apikey');
+      if(keyEl) { keyEl.focus(); keyEl.scrollIntoView(); }
+    },100);
+    return;
+  }
+  const btn = document.getElementById('btn-generate-ai');
+  btn.textContent = t('aiWait');
+  btn.disabled = true;
+
+  // Gather 1d, 1w, 1m data
+  const dates = Object.keys(DB.records).sort().reverse();
+  const d1 = dates.slice(0,1);
+  const w1 = dates.slice(0,7);
+  const m1 = dates.slice(0,30);
+
+  const summ = (arr) => {
+    if(!arr.length) return null;
+    let w=0, s=0, e=0, c=0;
+    arr.forEach(d=>{
+      const r=DB.records[d];
+      w+=r.weight||0; s+=r.sleep||0; e+=r.exercise||0;
+      if(r.weight) c++;
+    });
+    return c ? {days:arr.length, avgWeight:Math.round(w/c*10)/10, avgSleep:Math.round(s/c*10)/10, avgExercise:Math.round(e/c*10)/10} : null;
+  };
+  
+  const promptData = {
+    today: d1.length ? DB.records[d1[0]] : null,
+    pastWeekAvg: summ(w1),
+    pastMonthAvg: summ(m1)
+  };
+
+  const sysLang = lang === 'en' ? 'English' : 'Korean';
+
+  const msgs = [{
+    role:"system",
+    content:`You are an expert health advisor. Analyze the user's recent health data (1 day, 1 week, 1 month). Provide: 1) A highly detailed and comprehensive interpretation of their recent activities. 2) Extensive and highly actionable day-to-day recommendations. Your response MUST be extremely detailed, providing extensive context, and long enough to fully fill a standard smartphone screen when read by the user. Respond STRICTLY in valid JSON format: {"interpretation":"...", "recommendations":"..."}. Use clear paragraphs. Do NOT use markdown in your JSON strings. Write everything in ${sysLang} only.`
+  },{
+    role:"user",
+    content: JSON.stringify(promptData)
+  }];
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+      body:JSON.stringify({model:'gpt-3.5-turbo',messages:msgs})
+    });
+    const json = await res.json();
+    if(json.error) throw new Error(json.error.message);
+    const result = JSON.parse(json.choices[0].message.content);
+    document.getElementById('ai-interp-box').textContent = result.interpretation || '-';
+    document.getElementById('ai-reco-box').textContent = result.recommendations || '-';
+  } catch(err) {
+    alert("AI Error: " + err.message);
+  } finally {
+    btn.textContent = t('aiGenerate');
+    btn.disabled = false;
+  }
+}
+
+
+window.toggleLang=function(){
+  lang=document.getElementById('lang-toggle').checked?'en':'ko';
+  DB.settings.lang=lang;saveDB();
+  document.getElementById('lang-label').textContent=lang==='ko'?'KO':'EN';
+  applyLang();
+};
+
+window.setTheme=function(val){
+  DB.settings.theme=val;saveDB();
+  applyTheme(val);
+  ['auto','dark','light'].forEach(v=>{
+    const btn=document.getElementById('tseg-'+v);
+    if(btn)btn.classList.toggle('active',v===val);
+  });
+  // redraw charts to pick up new isDark value
+  if(document.getElementById('page-charts').classList.contains('active'))renderCharts();
+};
+
+// keep toggleTheme for backward compat (no longer called from UI)
+window.toggleTheme=window.setTheme.bind(null,'auto');
+
+function applyLang(){
+  ['home','records','charts','settings'].forEach(tab=>{
+    const el=document.getElementById('nav-'+tab);
+    if(el)el.textContent=t('nav'+tab[0].toUpperCase()+tab.slice(1));
+  });
+  if(document.getElementById('page-home').classList.contains('active'))renderHome();
+  if(document.getElementById('page-records').classList.contains('active'))renderRecords();
+  if(document.getElementById('page-charts').classList.contains('active'))renderCharts();
+  if(document.getElementById('page-ai').classList.contains('active'))renderAi();
+  if(document.getElementById('page-settings').classList.contains('active'))renderSettings();
+}
+
+window.exportCSV=function(){
+  const rows=[['Date','Weight(kg)','Sleep(h)','Exercise(min)','ExerciseType','Meal','Water(ml)','Stress','Coffee(ml)','Alcohol(ml)','AlcoholType','Smoking','Score']];
+  Object.keys(DB.records).sort().forEach(d=>{
+    const r=DB.records[d];const score=calcScore(r)??'';
+    rows.push([d,r.weight??'',r.sleep??'',r.exercise??'',r.exercise_type??'',r.meal??'',r.water??'',r.stress??'',r.coffee??'',r.alcohol??'',r.alcohol_type??'',r.smoking??'',score]);
+  });
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='health_data.csv';a.click();
+};
+
+window.resetData=function(){
+  if(!confirm(t('confirmReset')))return;
+  DB.records={};saveDB();
+  metricOrder=null;
+  renderHome();renderRecords();renderCharts();
+};
+
+// ── Tab ──
+let currentTab='home';
+window.switchTab=function(tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  currentTab=tab;
+  if(tab==='home')renderHome();
+  else if(tab==='records')renderRecords();
+  else if(tab==='charts')renderCharts();
+  else if(tab==='ai')renderAi();
+  else if(tab==='settings')renderSettings();
+};
+
+// ── Init ──
+loadDB();
+lang=DB.settings.lang||'ko';
+applyLang();
+applyTheme(DB.settings.theme||'auto');
+metricOrder=DB.settings.order;
+renderHome();
+
+// ── Daily Rollover Check ──
+let lastKnownDate=today();
+setInterval(()=>{
+  const current=today();
+  if(current!==lastKnownDate){
+    lastKnownDate=current;
+    if(currentTab==='home') renderHome();
+    else if(currentTab==='records') renderRecords();
+    else if(currentTab==='charts') renderCharts();
+  }
+}, 1000);
+</script>
+</body>
+</html>
