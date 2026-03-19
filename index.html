@@ -83,7 +83,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 .metric-form label{display:block;font-size:13px;color:var(--sub);margin:10px 0 4px}
 .metric-form input[type=number],.metric-form input[type=text],.metric-form select{
   width:100%;background:var(--card2);border:none;border-radius:var(--radius-sm);
-  padding:10px 12px;font-size:15px;color:var(--text);outline:none;font-family:inherit}
+  padding:10px 12px;font-size:16px;color:var(--text);outline:none;font-family:inherit}
 .metric-form input::placeholder{color:var(--sub)}
 .toggle-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .toggle-btn{flex:1;min-width:60px;padding:8px 4px;border:1.5px solid var(--sep);
@@ -160,7 +160,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 .settings-row .sub{font-size:13px;color:var(--sub)}
 .settings-row input[type=number],.settings-row input[type=text]{
   background:var(--card2);border:none;border-radius:var(--radius-sm);padding:6px 10px;
-  font-size:15px;color:var(--text);outline:none;font-family:inherit;width:120px;text-align:right}
+  font-size:16px;color:var(--text);outline:none;font-family:inherit;width:120px;text-align:right}
 .toggle-sw{position:relative;width:51px;height:31px;flex-shrink:0}
 .toggle-sw input{opacity:0;width:0;height:0}
 .sw-slider{position:absolute;inset:0;background:var(--sep);border-radius:34px;cursor:pointer;transition:.3s}
@@ -292,10 +292,6 @@ input:checked+.sw-slider:before{transform:translateX(20px)}
     <div class="settings-row">
       <span class="label" id="lbl-height">키 (cm)</span>
       <input type="number" id="set-height" placeholder="170" min="100" max="250">
-    </div>
-    <div class="settings-row">
-      <span class="label" id="lbl-apikey">OpenAI API Key</span>
-      <input type="password" id="set-apikey" placeholder="sk-..." style="width:140px;text-align:right">
     </div>
   </div>
   <div class="section-title" id="prefs-title">환경설정</div>
@@ -510,6 +506,36 @@ async function loadFromSupabase(){
     }
   }catch(e){
     console.warn('Supabase load error:',e);
+  }
+}
+
+async function saveAppSetting(key, value) {
+  if(!supabaseClient) return;
+  try {
+    const {error} = await supabaseClient.from('app_settings').upsert({ key, value }, { onConflict: 'key' });
+    if (error) throw error;
+  } catch(e) {
+    console.warn('Save app_settings error:', e);
+  }
+}
+
+async function loadAppSettings(){
+  if(!supabaseClient)return;
+  try{
+    const {data,error}=await supabaseClient.from('app_settings').select('*');
+    if(error)throw error;
+    if(data){
+      data.forEach(row=>{
+        if(row.key==='openai_api_key') DB.settings.openaiKey=row.value;
+        if(row.key==='user_name') DB.settings.name=row.value;
+        if(row.key==='user_height') DB.settings.height=row.value;
+      });
+      saveDB();
+      if(document.getElementById('set-name')) document.getElementById('set-name').value=DB.settings.name;
+      if(document.getElementById('set-height')) document.getElementById('set-height').value=DB.settings.height;
+    }
+  }catch(e){
+    console.warn('Load app_settings error:',e);
   }
 }
 
@@ -910,7 +936,7 @@ window.editRecField=function(e){
     let sel=null;
     if(m.extra==='alcType'){
       sel=document.createElement('select');
-      sel.style.cssText='font-size:12px;border-radius:6px;border:1px solid var(--sep);background:var(--card2);color:var(--text);padding:2px;';
+      sel.style.cssText='font-size:16px;border-radius:6px;border:1px solid var(--sep);background:var(--card2);color:var(--text);padding:2px;';
       m.extraOpts().forEach((o,i)=>{
         const opt=document.createElement('option');
         opt.value=m.extraVals[i]; opt.textContent=o;
@@ -1214,14 +1240,12 @@ function renderSettings(){
   document.getElementById('data-title').textContent=t('data');
   document.getElementById('lbl-name').textContent=t('name');
   document.getElementById('lbl-height').textContent=t('height');
-  if(document.getElementById('lbl-apikey')) document.getElementById('lbl-apikey').textContent='OpenAI API Key';
   document.getElementById('lbl-lang').textContent=t('lang');
   document.getElementById('lbl-theme').textContent=t('theme');
   document.getElementById('btn-export').textContent=t('export');
   document.getElementById('btn-reset').textContent=t('reset');
   document.getElementById('set-name').value=DB.settings.name||'';
   document.getElementById('set-height').value=DB.settings.height||'';
-  if(document.getElementById('set-apikey')) document.getElementById('set-apikey').value=DB.settings.openaiKey||'';
   document.getElementById('lang-toggle').checked=lang==='en';
   document.getElementById('lang-label').textContent=lang==='ko'?'KO':'EN';
   // update 3-button theme selector
@@ -1253,10 +1277,8 @@ function renderSettings(){
       </ul>`;
   }
 }
-document.getElementById('set-name').addEventListener('change',e=>{DB.settings.name=e.target.value;saveDB();renderHome();});
-document.getElementById('set-height').addEventListener('change',e=>{DB.settings.height=e.target.value;saveDB();});
-
-if(document.getElementById('set-apikey')) document.getElementById('set-apikey').addEventListener('change',e=>{DB.settings.openaiKey=e.target.value;saveDB();});
+document.getElementById('set-name').addEventListener('change',e=>{DB.settings.name=e.target.value;saveDB();renderHome();saveAppSetting('user_name', e.target.value);});
+document.getElementById('set-height').addEventListener('change',e=>{DB.settings.height=e.target.value;saveDB();saveAppSetting('user_height', e.target.value);});
 
 // ── AI ──
 function renderAi(){
@@ -1269,12 +1291,7 @@ function renderAi(){
 async function generateAI(){
   const apiKey = DB.settings.openaiKey;
   if(!apiKey){
-    alert(t('aiNoKey'));
-    switchTab('settings');
-    setTimeout(()=>{
-      const keyEl=document.getElementById('set-apikey');
-      if(keyEl) { keyEl.focus(); keyEl.scrollIntoView(); }
-    },100);
+    alert('OpenAI API 키가 설정되지 않았습니다. 서버 설정을 확인해주세요.');
     return;
   }
   const btn = document.getElementById('btn-generate-ai');
@@ -1410,10 +1427,11 @@ metricOrder=DB.settings.order;
 renderHome();
 // Load Supabase data and refresh UI
 initSupabase();
-loadFromSupabase().then(()=>{
+Promise.all([loadFromSupabase(), loadAppSettings()]).then(()=>{
   renderHome();
   if(document.getElementById('page-records').classList.contains('active'))renderRecords();
   if(document.getElementById('page-charts').classList.contains('active'))renderCharts();
+  if(document.getElementById('page-settings').classList.contains('active'))renderSettings();
 });
 
 // ── Daily Rollover Check ──
