@@ -1,0 +1,5 @@
+.DS_Store
+health_data.json
+test.py
+claude-env/
+venv/
