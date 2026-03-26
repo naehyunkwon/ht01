@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Health Tracker">
+<link rel="apple-touch-icon" href="apple_touch_icon.png">
 <title>나의 건강 트래커</title>
 <style>
 :root {
@@ -13,16 +15,20 @@
   --nav:#F9F9F9EE;--radius:16px;--radius-sm:10px;--shadow:0 2px 16px rgba(0,0,0,.08);
   --safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px);
   --nav-h:calc(52px + var(--safe-bot));
+  --icon-mix: #ffffff;
+  --icon-blend: 50%;
 }
 @media(prefers-color-scheme:dark){:root{
   --bg:#000;--card:#1C1C1E;--card2:#2C2C2E;--text:#FFF;--sub:#8E8E93;--sep:#38383A;
   --nav:#1C1C1EEE;--shadow:0 2px 16px rgba(0,0,0,.4);
+  --icon-mix: #3A3A3C;
+  --icon-blend: 20%;
 }}
 /* Forced theme overrides (set by user in Settings) */
 html.force-light{--bg:#F2F2F7;--card:#FFF;--card2:#F2F2F7;--text:#000;--sub:#8E8E93;--sep:#C6C6C8;
-  --nav:#F9F9F9EE;--shadow:0 2px 16px rgba(0,0,0,.08);color-scheme:light}
+  --nav:#F9F9F9EE;--shadow:0 2px 16px rgba(0,0,0,.08);color-scheme:light;--icon-mix:#ffffff;--icon-blend:50%;}
 html.force-dark{--bg:#000;--card:#1C1C1E;--card2:#2C2C2E;--text:#FFF;--sub:#8E8E93;--sep:#38383A;
-  --nav:#1C1C1EEE;--shadow:0 2px 16px rgba(0,0,0,.4);color-scheme:dark}
+  --nav:#1C1C1EEE;--shadow:0 2px 16px rgba(0,0,0,.4);color-scheme:dark;--icon-mix:#3A3A3C;--icon-blend:20%;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
   background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden;
@@ -134,6 +140,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
   border-radius:8px;padding:4px 8px;color:var(--text);outline:none;font-family:inherit;
   width:110px;text-align:right;-webkit-appearance:none;appearance:none;
 }
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  appearance: none;
+  margin: 0; 
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
 .chip{background:var(--card2);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:500}
 .chip.good{background:#30D15822;color:#30D158}
 .chip.warn{background:#FF9F0A22;color:#FF9F0A}
@@ -142,7 +157,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 .chart-card{background:var(--card);border-radius:var(--radius);margin:0 16px 10px;padding:16px;
   box-shadow:var(--shadow);overflow:hidden}
 .chart-card.pinned{position:sticky;top:calc(var(--safe-top) + 4px);z-index:100;border:1.5px solid rgba(48, 209, 88, 0.6);box-shadow:0 6px 24px rgba(48, 209, 88, 0.15);background:var(--card);}
-.chart-title{font-size:15px;font-weight:600;margin-bottom:12px}
+.chart-title{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
 .chart-scales{display:flex;gap:6px;padding:4px 16px 0}
 .scale-btn{padding:5px 12px;border-radius:20px;border:none;background:var(--card2);color:var(--sub);
   font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
@@ -245,7 +260,12 @@ input:checked+.sw-slider:before{transform:translateX(20px)}
 
 <!-- RECORDS -->
 <div id="page-records" class="page">
-  <div class="header"><h1 id="records-title">기록</h1></div>
+  <div class="header" style="display:flex; justify-content:space-between; align-items:center;">
+    <h1 id="records-title">기록</h1>
+    <div style="position:relative;">
+      <button id="btn-add-past" onclick="openCustomCalendar()" style="font-size:13px; font-weight:600; color:var(--accent2); background:none; border:none; cursor:pointer;">+ 과거 기록 추가</button>
+    </div>
+  </div>
   <div id="records-list"><p class="empty" id="no-records">기록이 없습니다</p></div>
 </div>
 
@@ -365,6 +385,7 @@ const T = {
     noData:'데이터 없음',confirmReset:'모든 데이터를 삭제할까요? 되돌릴 수 없습니다.',
     edit:'수정',theme:'다크 모드',themeAuto:'자동',themeDark:'다크',themeLight:'라이트',
     logicTitle:'점수 계산 방식',logicSummary:'건강 점수는 어떻게 계산되나요?',
+    addPastDate:'+ 과거 기록 추가',
     navAi:'AI 추천',aiTitle:'AI 추천',aiInterpTitle:'최근 건강 모니터링 해석',aiRecoTitle:'AI 맞춤 추천',
     aiGenerate:'AI 분석 생성하기',aiWait:'분석 중...',aiNoKey:'설정창에서 OpenAI API 키를 먼저 입력해주세요.',
     logicContent:`<p style="margin-bottom:8px">건강 점수(100점 만점)는 다음 항목들을 종합하여 계산됩니다:</p>
@@ -403,6 +424,7 @@ const T = {
     noData:'No data',confirmReset:'Delete all data? This cannot be undone.',
     edit:'Edit',theme:'Dark Mode',themeAuto:'Auto',themeDark:'Dark',themeLight:'Light',
     logicTitle:'Scoring Logic',logicSummary:'How is the Health Score calculated?',
+    addPastDate:'+ Add Past Date',
     navAi:'AI Recommend',aiTitle:'AI Recommend',aiInterpTitle:'Interpretation of recent activities',aiRecoTitle:'AI Recommendations',
     aiGenerate:'Generate AI Analysis',aiWait:'Analyzing...',aiNoKey:'Please enter OpenAI API key in Settings first.',
     logicContent:`<p style="margin-bottom:8px">The Health Score (out of 100) is calculated based on the following:</p>
@@ -548,6 +570,84 @@ function today(){
   return new Date(d.getTime()-(d.getTimezoneOffset()*60000)).toISOString().split('T')[0];
 }
 
+window.openPastDate=function(d){
+  if(!d)return;
+  if(!DB.records[d]) {
+    DB.records[d]={};
+    saveDB();
+  }
+  renderRecords();
+  setTimeout(()=>{
+    const el = document.getElementById('score-wrap-'+d);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 100);
+};
+
+window.openCustomCalendar = function() {
+  const overlay = document.createElement('div');
+  overlay.id = 'custom-calendar';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--card);width:300px;border-radius:16px;padding:16px;box-shadow:var(--shadow);';
+  
+  let curr = new Date();
+  
+  function renderCal() {
+    const y = curr.getFullYear();
+    const m = curr.getMonth();
+    const firstDay = new Date(y, m, 1).getDay();
+    const days = new Date(y, m+1, 0).getDate();
+    
+    let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <button onclick="changeCal(-1)" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--text);">&lt;</button>
+      <div style="font-weight:bold;font-size:16px;">${y}.${String(m+1).padStart(2,'0')}</div>
+      <button onclick="changeCal(1)" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--text);">&gt;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:12px;color:var(--sub);margin-bottom:8px;">
+      <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;">`;
+    
+    for(let i=0; i<firstDay; i++) html += `<div></div>`;
+    
+    const todayStr = today();
+    for(let i=1; i<=days; i++){
+      const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+      const isSkipped = !DB.records[dStr] || Object.keys(DB.records[dStr]).length === 0;
+      const isFuture = dStr > todayStr;
+      
+      let style = `padding:8px 0; border-radius:50%; cursor:${isFuture?'default':'pointer'}; color:${isFuture?'var(--sep)':'var(--text)'}; position:relative;`;
+      
+      html += `<div style="${style}" onclick="${isFuture ? '' : `pickCalDate('${dStr}')`}">
+        ${i}
+        ${isSkipped && !isFuture && dStr !== todayStr ? `<div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--orange);"></div>` : ''}
+      </div>`;
+    }
+    
+    html += `</div>
+    <div style="text-align:right;margin-top:16px;">
+      <button onclick="document.getElementById('custom-calendar').remove()" style="background:none;border:none;color:var(--sub);font-weight:600;padding:8px;cursor:pointer;">Cancel</button>
+    </div>`;
+    
+    box.innerHTML = html;
+  }
+  
+  window.changeCal = function(dir){
+    curr.setMonth(curr.getMonth() + dir);
+    renderCal();
+  };
+  
+  window.pickCalDate = function(d){
+    document.getElementById('custom-calendar').remove();
+    openPastDate(d);
+  };
+  
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  renderCal();
+};
+
 function applyTheme(th){
   document.documentElement.classList.remove('force-light','force-dark');
   if(th==='dark')document.documentElement.classList.add('force-dark');
@@ -556,15 +656,15 @@ function applyTheme(th){
 
 // ── Metrics config ──
 const METRICS_DEF=[
-  {id:'weight',icon:'⚖️',color:'#0A84FF',unit:()=>t('weightUnit'),type:'number',min:20,max:300,step:.1,ph:()=>`0 ${t('weightUnit')}`},
-  {id:'sleep',icon:'🛌',color:'#5E5CE6',unit:()=>t('sleepUnit'),type:'number',min:0,max:24,step:.5,ph:()=>`0 ${t('sleepUnit')}`},
-  {id:'exercise',icon:'🏃',color:'#30D158',unit:()=>t('exUnit'),type:'number',min:0,max:300,step:1,ph:()=>`0 ${t('exUnit')}`},
-  {id:'meal',icon:'🍽️',color:'#FF9F0A',type:'toggle3',opts:()=>[t('mealBad'),t('mealNeutral'),t('mealGood')],vals:['bad','neutral','good']},
-  {id:'water',icon:'💧',color:'#32ADE6',unit:()=>t('waterUnit'),type:'number',min:0,max:5000,step:50,ph:()=>`0 ${t('waterUnit')}`},
-  {id:'stress',icon:'🧘',color:'#BF5AF2',type:'toggle3',opts:()=>[t('stressLow'),t('stressMid'),t('stressHigh')],vals:['low','mid','high']},
-  {id:'coffee',icon:'☕',color:'#AC8E68',unit:()=>t('coffeeUnit'),type:'number',min:0,max:2000,step:50,ph:()=>`0 ${t('coffeeUnit')}`},
-  {id:'alcohol',icon:'🍺',color:'#FF6961',unit:()=>t('alcoholUnit'),type:'number',min:0,max:2000,step:50,extra:'alcType',extraOpts:()=>[t('beer'),t('wine'),t('soju'),t('spirits'),t('other')],extraVals:['beer','wine','soju','spirits','other'],ph:()=>`0 ${t('alcoholUnit')}`},
-  {id:'smoking',icon:'🚬',color:'#FF453A',type:'toggle2',opts:()=>[t('yes'),t('no')],vals:['yes','no']},
+  {id:'weight',icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 10a2 2 0 100-4 2 2 0 000 4z"/><path d="M8 14h8"/></svg>',color:'#0A84FF',unit:()=>t('weightUnit'),type:'number',min:20,max:300,ph:()=>`0 ${t('weightUnit')}`},
+  {id:'sleep',icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>',color:'#5E5CE6',unit:()=>t('sleepUnit'),type:'number',min:0,max:24,ph:()=>`0 ${t('sleepUnit')}`},
+  {id:'exercise',icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',color:'#30D158',unit:()=>t('exUnit'),type:'number',min:0,max:300,ph:()=>`0 ${t('exUnit')}`},
+  {id:'meal',icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="12" r="6"/><path d="M3 2v4a2 2 0 002 2 2 2 0 002-2V2"/><path d="M5 2v20"/></svg>',color:'#FF9F0A',type:'toggle3',opts:()=>[t('mealBad'),t('mealNeutral'),t('mealGood')],vals:['bad','neutral','good']},
+  {id:'water',icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>',color:'#32ADE6',unit:()=>t('waterUnit'),type:'number',min:0,max:5000,ph:()=>`0 ${t('waterUnit')}`},
+  {id:'stress',icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',color:'#BF5AF2',type:'toggle3',opts:()=>[t('stressLow'),t('stressMid'),t('stressHigh')],vals:['low','mid','high']},
+  {id:'coffee',icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>',color:'#AC8E68',unit:()=>t('coffeeUnit'),type:'number',min:0,max:2000,ph:()=>`0 ${t('coffeeUnit')}`},
+  {id:'alcohol',icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 22h8M12 15v7M8 3h8l-4 12zM8 8h8"/></svg>',color:'#FF6961',unit:()=>t('alcoholUnit'),type:'number',min:0,max:2000,ph:()=>`0 ${t('alcoholUnit')}`},
+  {id:'smoking',icon:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 16H3a1 1 0 01-1-1v-2a1 1 0 011-1h15"/><path d="M18 12h3a1 1 0 011 1v2a1 1 0 01-1 1h-3"/><path d="M18 12v4"/><path d="M7 12v4"/><path d="M16 6.5c-1.5-1.5-3.5-1.5-3.5 1S10 11 10 12"/><path d="M12 4.5c-1.5-1.5-3.5-1.5-3.5 1S6 9 6 10"/></svg>',color:'#FF453A',type:'toggle2',opts:()=>[t('yes'),t('no')],vals:['yes','no']},
 ];
 
 // metric ORDER (draggable)
@@ -618,9 +718,11 @@ function renderHome(){
   const h=new Date().getHours();
   const gKey=h<12?'morning':h<18?'afternoon':'evening';
   const name=DB.settings.name;
+  
   document.getElementById('greeting').textContent=t(gKey)+(name?`, ${name}!`:'!');
   document.getElementById('home-title').textContent=t('home');
   document.getElementById('home-date').textContent=fmtDate(new Date());
+
   document.getElementById('metrics-title').textContent=t('metricsTitle');
   document.getElementById('score-lbl').textContent=t('scoreLabel');
   const rec=DB.records[today()]||{};
@@ -663,7 +765,7 @@ function buildCard(m,rec){
   handle.setAttribute('draggable','false');
   // tap area
   const tap=document.createElement('div');tap.className='row-tap';
-  tap.innerHTML=`<div class="metric-icon" style="background:${m.color}22">${m.icon}</div>
+  tap.innerHTML=`<div class="metric-icon" style="background:color-mix(in srgb, ${m.color} var(--icon-blend), var(--icon-mix)); color:#fff;">${m.icon}</div>
   <div class="metric-info">
     <div class="metric-name">${t(m.id)}</div>
     <div class="metric-val" id="val-${m.id}">${fmtVal(m,rec)}</div>
@@ -679,13 +781,14 @@ function buildCard(m,rec){
   return card;
 }
 
-function fmtVal(m,rec){
+function fmtVal(m,rec,showType=true){
   const v=rec[m.id];
   if(v==null){return`<span style="color:var(--sub)">–</span>`;}
   if(m.type==='toggle2'){return v==='yes'?t('yes'):t('no');}
   if(m.type==='toggle3'){const i=m.vals.indexOf(v);return i>=0?(m.opts()[i]):v;}
-  let s=v+(m.unit?m.unit():'');
-  if(m.extra&&rec[m.id+'_type']&&v!==0){
+  let displayV = typeof v === 'number' ? v.toLocaleString('en-US') : v;
+  let s=displayV+(m.unit?m.unit():'');
+  if(showType&&m.extra&&rec[m.id+'_type']&&v!==0){
     const tv=rec[m.id+'_type'];
     const idx=m.extraVals?m.extraVals.indexOf(tv):-1;
     const tl=idx>=0?m.extraOpts()[idx]:tv;
@@ -700,17 +803,8 @@ function buildForm(m,rec){
   if(m.type==='number'){
     const ph=m.ph?m.ph():'0';
     const initV=rec[m.id]??'';
-    if(m.extra==='alcType'){
-      html+=`<label>${t(m.id)}</label>
-      <input type="number" id="inp-${m.id}" value="${initV}" min="${m.min}" max="${m.max}" step="${m.step}" placeholder="${ph}" oninput="document.getElementById('alc-type-wrap').style.display=(this.value>0?'block':'none')">`;
-      const showSel = initV>0;
-      html+=`<div id="alc-type-wrap" style="display:${showSel?'block':'none'}"><label>${t('alcType')}</label><select id="inp-${m.id}_type">`;
-      m.extraOpts().forEach((o,i)=>html+=`<option value="${m.extraVals[i]}" ${rec[m.id+'_type']===m.extraVals[i]?'selected':''}>${o}</option>`);
-      html+=`</select></div>`;
-    } else {
-      html+=`<label>${t(m.id)}</label>
-      <input type="number" id="inp-${m.id}" value="${initV}" min="${m.min}" max="${m.max}" step="${m.step}" placeholder="${ph}">`;
-    }
+    html+=`<label>${t(m.id)}</label>
+    <input type="number" id="inp-${m.id}" value="${initV}" min="${m.min}" max="${m.max}" placeholder="${ph}">`;
   } else if(m.type==='toggle3'||m.type==='toggle2'){
     html+=`<div class="toggle-group">`;
     m.opts().forEach((o,i)=>html+=`<button class="toggle-btn${rec[m.id]===m.vals[i]?' active':''}" onclick="toggleSel(this,'${m.id}','${m.vals[i]}')">${o}</button>`);
@@ -735,19 +829,8 @@ window.saveMetric=function(id){
   const rec=DB.records[today()]||{};
   if(m.type==='number'){
     const v=document.getElementById('inp-'+id)?.value;
-    const te=document.getElementById('inp-'+id+'_type');
-    if(te)rec[id+'_type']=te.value;
     if(v!==''){
       let val=parseFloat(v);
-      if(id==='alcohol'&&te){
-        const type=te.value;
-        let pct=0.10; // default for 'other'
-        if(type==='beer')pct=0.05;
-        else if(type==='wine')pct=0.14;
-        else if(type==='soju')pct=0.16;
-        else if(type==='spirits')pct=0.40;
-        val=val*pct;
-      }
       rec[id]=Math.round(val*10)/10; // round to 1 decimal
     }
   }
@@ -853,6 +936,15 @@ function initDrag(){
 }
 
 // ── Records (editable) ──
+window.deleteRecord = function(d) {
+  if(!confirm('해당 날짜의 기록을 삭제하시겠습니까? / Delete this record?')) return;
+  delete DB.records[d];
+  saveDB();
+  if (supabaseClient) supabaseClient.from('health_records').delete().match({ date: d }).then(()=>showSync('done')).catch(()=>showSync('error'));
+  renderRecords();
+  if(currentTab==='home') renderHome();
+};
+
 // Track the currently active edit row for the global lock
 let activeEditRow=null;
 
@@ -873,15 +965,20 @@ function renderRecords(){
     const div=document.createElement('div');div.className='rec-day';
     const sc=score!==null?`<div style="margin-bottom:8px" id="score-wrap-${d}"><span class="chip ${score>=65?'good':score>=40?'warn':'bad'}">${score}점</span></div>`:`<div style="margin-bottom:8px" id="score-wrap-${d}"></div>`;
 
+    const dateHtml = `<div class="rec-date" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <span>${d}</span>
+      <button onclick="deleteRecord('${d}')" style="background:none; border:none; color:var(--sub); font-size:18px; line-height:1; padding:0 4px; cursor:pointer;">&times;</button>
+    </div>`;
+
     // Use main-page metric order; split first 5 → col1, rest → col2
     const ordered=getMETRICS(); // Removed .filter(..., null) to show all items
     const col1=ordered.slice(0,5);
     const col2=ordered.slice(5);
 
     function mkField(m){
-      let lbl=fmtVal(m,rec);
+      let lbl=fmtVal(m,rec,false);
       return `<div class="rec-field" onclick="editRecField(event)" data-date="${d}" data-id="${m.id}" style="cursor:pointer">
-        <span class="rec-field-icon">${m.icon}</span>
+        <div style="width:24px;height:24px;border-radius:6px;background:color-mix(in srgb, ${m.color} var(--icon-blend), var(--icon-mix));color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${m.icon}</div>
         <span class="rec-field-name">${t(m.id)}</span>
         <span class="rec-field-val" id="rfv-${d}-${m.id}">${lbl}</span>
       </div>`;
@@ -895,7 +992,7 @@ function renderRecords(){
       <div class="rec-col">${c2Html}</div>
     </div>`;
 
-    div.innerHTML=`<div class="rec-date">${d}</div>${sc}${gridHtml}`;
+    div.innerHTML=`${dateHtml}${sc}${gridHtml}`;
     list.appendChild(div);
   });
 }
@@ -926,28 +1023,14 @@ window.editRecField=function(e){
 
     const input=document.createElement('input');
     input.className='rec-field-input';
-    input.type='number';input.value=rec[id]??'';input.step=m.step;
+    input.type='number';input.value=rec[id]??'';
     input.min=m.min;input.max=m.max;
     input.style.fontSize='16px'; // prevents iOS auto-zoom
     input.style.width='auto';
     input.style.minWidth='60px';
     wrap.appendChild(input);
 
-    let sel=null;
-    if(m.extra==='alcType'){
-      sel=document.createElement('select');
-      sel.style.cssText='font-size:16px;border-radius:6px;border:1px solid var(--sep);background:var(--card2);color:var(--text);padding:2px;';
-      m.extraOpts().forEach((o,i)=>{
-        const opt=document.createElement('option');
-        opt.value=m.extraVals[i]; opt.textContent=o;
-        if(rec[id+'_type']===m.extraVals[i]) opt.selected=true;
-        sel.appendChild(opt);
-      });
-      wrap.appendChild(sel);
-    }
-
     function done(){
-      if(m.extra==='alcType'&&sel) rec[id+'_type']=sel.value;
       commitEdit(date,id,m,input,valEl,null);
       wrap.remove(); // we appended `wrap` this time
       activeEditRow=null;
@@ -961,10 +1044,6 @@ window.editRecField=function(e){
       if(ev.key==='Enter')done();
       if(ev.key==='Escape'){valEl.style.display='';wrap.remove();activeEditRow=null;}
     };
-    if(sel){
-      sel.onkeydown=input.onkeydown;
-      sel.onchange=()=>{input.focus();};
-    }
 
     row.appendChild(wrap);
     // ── Fix 1: focus immediately (no delay) so iOS keyboard pops up ──
@@ -1000,6 +1079,16 @@ window.editRecField=function(e){
       wrap.appendChild(btn);
     });
     row.appendChild(wrap);
+    
+    function onClickAwayToggle(ev) {
+      if(activeEditRow === row && !row.contains(ev.target)) {
+        valEl.style.display='';
+        wrap.remove();
+        activeEditRow=null;
+        document.removeEventListener('pointerdown', onClickAwayToggle);
+      }
+    }
+    setTimeout(()=>document.addEventListener('pointerdown', onClickAwayToggle), 50);
   }
 };
 
@@ -1037,6 +1126,18 @@ function getDays(scale){return scale==='1W'?7:scale==='1M'?30:scale==='3M'?90:36
 function renderCharts(){
   document.getElementById('charts-title').textContent=t('charts');
   const container=document.getElementById('charts-list');container.innerHTML='';
+  window.chartDisarmers = [];
+  if (!window.hasGlobalChartTap) {
+    window.hasGlobalChartTap = true;
+    document.addEventListener('pointerdown', (e) => {
+      if (document.getElementById('page-charts').classList.contains('active')) {
+        if (!e.target.closest('.chart-scroll')) {
+          if (window.chartDisarmers) window.chartDisarmers.forEach(fn => fn());
+        }
+      }
+    });
+  }
+
   const days=getDays(currentScale);
   const end=new Date();const dates=[];
   for(let i=days-1;i>=0;i--){
@@ -1053,19 +1154,21 @@ function renderCharts(){
 
   // ── 2. Metric charts in drag order (line charts) ──
   getMETRICS().forEach(m=>{
+    const chartIcon = `<div style="width:24px;height:24px;border-radius:6px;background:color-mix(in srgb, ${m.color} var(--icon-blend), var(--icon-mix));color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${m.icon}</div>`;
+    
     if(m.type==='number'){
       const vals=dates.map(d=>{const v=DB.records[d]?.[m.id];return v!=null?parseFloat(v):null;});
       if(vals.every(v=>v===null))return;
-      appendChart(container,`${m.icon} ${t(m.id)}${m.unit?' ('+m.unit()+')':''}`,vals,dates,m.color,{clampZero: m.min >= 0},120,false);
+      appendChart(container,`${chartIcon} ${t(m.id)}${m.unit?' ('+m.unit()+')':''}`,vals,dates,m.color,{clampZero: m.min >= 0},120,false);
     } else if(m.type==='toggle3'){
       const vals=dates.map(d=>{const v=DB.records[d]?.[m.id];return v!=null?m.vals.indexOf(v):null;});
       if(vals.every(v=>v===null))return;
-      appendChart(container,`${m.icon} ${t(m.id)}`,vals,dates,m.color,
+      appendChart(container,`${chartIcon} ${t(m.id)}`,vals,dates,m.color,
         {yMin:0,yMax:2,ySteps:2,labels:{0:m.opts()[0],1:m.opts()[1],2:m.opts()[2]}},100,false);
     } else if(m.type==='toggle2'){
       const vals=dates.map(d=>{const v=DB.records[d]?.[m.id];return v!=null?m.vals.indexOf(v):null;});
       if(vals.every(v=>v===null))return;
-      appendChart(container,`${m.icon} ${t(m.id)}`,vals,dates,m.color,
+      appendChart(container,`${chartIcon} ${t(m.id)}`,vals,dates,m.color,
         {yMin:0,yMax:1,ySteps:1,labels:{0:m.opts()[0],1:m.opts()[1]}},100,false);
     }
   });
@@ -1075,7 +1178,7 @@ function appendChart(container,title,vals,dates,color,opts,h,pinned){
   const card=document.createElement('div');
   card.className='chart-card'+(pinned?' pinned':'');
 
-  const titleEl=document.createElement('div');titleEl.className='chart-title';titleEl.textContent=title;
+  const titleEl=document.createElement('div');titleEl.className='chart-title';titleEl.innerHTML=title;
   card.appendChild(titleEl);
 
   const wrap=document.createElement('div');
@@ -1137,14 +1240,28 @@ function drawChart(canvas,oCanvas,vals,dates,color,opts,H,scrollWrap){
     yMin=opts.yMin;yMax=opts.yMax;
   } else {
     const dataMin=Math.min(...nonNull),dataMax=Math.max(...nonNull);
-    const dataPad=(dataMax-dataMin)||Math.max(dataMax*0.1,1);
-    yMin=dataMin-dataPad*0.1;
-    yMax=dataMax+dataPad*0.1;
+    let dataRange = dataMax - dataMin;
+    if (dataRange === 0) dataRange = 1;
+    const padding = dataRange * 0.5;
+    yMin = Math.floor(dataMin - padding);
+    yMax = Math.ceil(dataMax + padding);
+    if(dataMin === 0) {
+      yMin = 0;
+    }
     if(opts.clampZero && yMin < 0) {
       yMin = 0;
     }
   }
-  const range=yMax-yMin||1;
+  
+  let steps=opts.ySteps??4;
+  let range=yMax-yMin||1;
+  if(opts.ySteps==null){
+    let stepSize = Math.max(1, Math.ceil(range / steps));
+    steps = Math.max(1, Math.ceil(range / stepSize));
+    yMax = yMin + steps * stepSize;
+    range = yMax - yMin;
+  }
+
   const toX=i=>pad.l+(i/(vals.length-1||1))*cw;
   const toY=v=>pad.t+ch-(v-yMin)/range*ch;
 
@@ -1153,7 +1270,6 @@ function drawChart(canvas,oCanvas,vals,dates,color,opts,H,scrollWrap){
   // Overlay Grid (fixed)
   oCtx.strokeStyle=gridClr;oCtx.lineWidth=1;
   oCtx.setLineDash([4, 4]);
-  const steps=opts.ySteps??4;
   for(let g=0;g<=steps;g++){const y=pad.t+ch*g/steps;oCtx.beginPath();oCtx.moveTo(pad.l,y);oCtx.lineTo(containerW,y);oCtx.stroke();}
   oCtx.setLineDash([]);
   
@@ -1168,7 +1284,8 @@ function drawChart(canvas,oCanvas,vals,dates,color,opts,H,scrollWrap){
 
   // x labels
   ctx.textAlign='center';
-  const step=Math.max(1,Math.ceil(vals.length/8));
+  const idealLabels=Math.max(2, Math.floor(cw/60));
+  const step=Math.max(1,Math.ceil(vals.length/idealLabels));
   dates.forEach((d,i)=>{
     if(i%step===0||i===vals.length-1){
       const parts=d.split('-');ctx.fillStyle=textClr;
@@ -1216,18 +1333,130 @@ function drawChart(canvas,oCanvas,vals,dates,color,opts,H,scrollWrap){
     const firstI=vals.findIndex(v=>v!==null);
     if(firstI>=0){ctx.lineTo(toX(lastI),pad.t+ch);ctx.lineTo(toX(firstI),pad.t+ch);ctx.closePath();ctx.fillStyle=grad;ctx.fill();}
     ctx.beginPath();started=false;
-    ctx.strokeStyle=color;ctx.lineWidth=3.5;ctx.lineJoin='round';ctx.lineCap='round';
+    ctx.strokeStyle=color;ctx.lineWidth=1.75;ctx.lineJoin='round';ctx.lineCap='round';
     vals.forEach((v,i)=>{if(v===null)return;const x=toX(i),y=toY(v);if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);});
     ctx.stroke();
     // Add small subtle data points on all line charts
     vals.forEach((v,i)=>{
-      if(v===null)return;
+      const x=toX(i);
       ctx.beginPath();
-      ctx.arc(toX(i),toY(v),2.5,0,Math.PI*2);
-      ctx.fillStyle=color;
-      ctx.fill();
+      if(v!==null){
+        ctx.arc(x,toY(v),2.5,0,Math.PI*2);
+        ctx.fillStyle=color;
+        ctx.fill();
+      }
     });
   }
+  
+  // Interactive Crosshair
+  let activeIndex=-1;
+  let crosshairTimer=null;
+  function renderCrosshair(){
+    oCtx.clearRect(0,0,oCanvas.width,oCanvas.height);
+    // redraw grid
+    oCtx.strokeStyle=gridClr;oCtx.lineWidth=1;
+    oCtx.setLineDash([4, 4]);
+    for(let g=0;g<=steps;g++){const y=pad.t+ch*g/steps;oCtx.beginPath();oCtx.moveTo(pad.l,y);oCtx.lineTo(containerW,y);oCtx.stroke();}
+    oCtx.setLineDash([]);
+    oCtx.fillStyle=textClr;oCtx.font=`10px -apple-system`;oCtx.textAlign='right';
+    for(let g=0;g<=steps;g++){
+      const v=yMax-range*g/steps;const y=pad.t+ch*g/steps;
+      let rounded=Math.round(v);
+      let lbl=opts.labels?opts.labels[rounded]??'':rounded.toLocaleString('en-US');
+      oCtx.fillText(lbl,pad.l-4,y+4);
+    }
+    
+    if(activeIndex>=0 && vals[activeIndex]!==null){
+      const x=toX(activeIndex)-scrollWrap.scrollLeft;
+      const y=toY(vals[activeIndex]);
+      
+      oCtx.save();
+      oCtx.strokeStyle=isDark?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.4)';
+      oCtx.lineWidth=1;
+      oCtx.setLineDash([2,3]);
+      
+      oCtx.beginPath();oCtx.moveTo(x, pad.t);oCtx.lineTo(x, pad.t+ch);oCtx.stroke();
+      oCtx.beginPath();oCtx.moveTo(pad.l, y);oCtx.lineTo(containerW, y);oCtx.stroke();
+      oCtx.restore();
+      
+      oCtx.fillStyle=color;
+      oCtx.beginPath();oCtx.arc(x,y,4,0,Math.PI*2);oCtx.fill();
+      oCtx.strokeStyle=cardColor;oCtx.lineWidth=2;oCtx.stroke();
+      
+      let rawVal = vals[activeIndex];
+      let displayVal = typeof rawVal === 'number' ? rawVal.toLocaleString('en-US') : rawVal;
+      let labelTxt = opts.labels ? opts.labels[rawVal] : displayVal;
+      oCtx.fillStyle=isDark?'#fff':'#000';
+      oCtx.font='bold 12px -apple-system';
+      oCtx.textAlign='center';
+      
+      // Top value label
+      let tx = Math.min(Math.max(x, pad.l+20), containerW-20);
+      let ty = y - 10;
+      if (ty < 15) { ty = y + 20; }
+      
+      // Draw a subtle background for the top popup text so it's readable over grid
+      oCtx.fillStyle = cardColor;
+      const textMetrics = oCtx.measureText(labelTxt);
+      const textW = textMetrics.width + 12;
+      oCtx.fillRect(tx - textW/2, ty - 12, textW, 16);
+      
+      oCtx.fillStyle = isDark?'#fff':'#000';
+      oCtx.fillText(labelTxt, tx, ty);
+      
+      // Bottom X-axis Date label
+      const dParts = dates[activeIndex].split('-');
+      const dStr = dParts[1]+'/'+dParts[2];
+      oCtx.font = 'bold 10px -apple-system';
+      
+      // Use text stroke to create a precise "halo" that covers underlying static text reliably
+      // without drawing a large opaque rectangle that covers the horizontal scrollbar.
+      oCtx.lineJoin = 'round';
+      oCtx.lineWidth = 10;
+      oCtx.strokeStyle = cardColor;
+      oCtx.strokeText(dStr, tx, H - 8);
+      
+      oCtx.fillStyle = color;
+      oCtx.fillText(dStr, tx, H - 8);
+    }
+  }
+  
+  window.chartDisarmers.push(() => {
+    if (activeIndex !== -1) {
+      activeIndex = -1;
+      renderCrosshair();
+    }
+  });
+
+  scrollWrap.addEventListener('scroll', ()=>renderCrosshair());
+  scrollWrap.addEventListener('pointerdown', e=>{
+    const rect=scrollWrap.getBoundingClientRect();
+    const clickX=e.clientX-rect.left+scrollWrap.scrollLeft;
+    
+    // dismiss all other charts
+    if (window.chartDisarmers) window.chartDisarmers.forEach(fn => fn());
+
+    let minDst=Infinity;
+    let best=-1;
+    vals.forEach((v,i)=>{
+      if(v!==null){
+        const dx=Math.abs(toX(i)-clickX);
+        if(dx<minDst&&dx<40){minDst=dx;best=i;}
+      }
+    });
+    if(best!==-1){
+      activeIndex=best;
+      renderCrosshair();
+      if(crosshairTimer) clearTimeout(crosshairTimer);
+      crosshairTimer = setTimeout(()=>{
+        activeIndex=-1;
+        renderCrosshair();
+      }, 10000);
+    } else {
+      activeIndex=-1;
+      renderCrosshair();
+    }
+  });
 
   scrollWrap.scrollLeft=scrollWrap.scrollWidth;
 }
@@ -1325,7 +1554,11 @@ async function generateAI(){
 
   const msgs = [{
     role:"system",
-    content:`You are an expert health advisor. Analyze the user's recent health data (1 day, 1 week, 1 month). Provide: 1) A highly detailed and comprehensive interpretation of their recent activities. 2) Extensive and highly actionable day-to-day recommendations. Your response MUST be extremely detailed, providing extensive context, and long enough to fully fill a standard smartphone screen when read by the user. Respond STRICTLY in valid JSON format: {"interpretation":"...", "recommendations":"..."}. Use clear paragraphs. Do NOT use markdown in your JSON strings. Write everything in ${sysLang} only.`
+    content:`You are an expert health advisor and data analyst. Analyze the user's recent health data (1 day, 1 week, 1 month). Write everything in ${sysLang} only.
+Provide:
+1) A highly personalized **interpretation** of their recent activities, focusing explicitly on patterns found in their data (e.g., changes across days, correlations between metrics like sleep and stress), and acknowledging their progress compared to past data. Avoid generic advice.
+2) **Recommendations** that provide concrete, actionable micro-steps based on their baseline data, and tailored targets based on their own historical best.
+Respond STRICTLY in valid JSON format: {"interpretation":"...", "recommendations":"..."}. Use clear paragraphs. Do NOT use markdown in your JSON strings.`
   },{
     role:"user",
     content: JSON.stringify(promptData)
@@ -1377,6 +1610,8 @@ function applyLang(){
     const el=document.getElementById('nav-'+tab);
     if(el)el.textContent=t('nav'+tab[0].toUpperCase()+tab.slice(1));
   });
+  const btnPast = document.getElementById('btn-add-past');
+  if(btnPast)btnPast.textContent=t('addPastDate');
   if(document.getElementById('page-home').classList.contains('active'))renderHome();
   if(document.getElementById('page-records').classList.contains('active'))renderRecords();
   if(document.getElementById('page-charts').classList.contains('active'))renderCharts();
