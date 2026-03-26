@@ -1560,11 +1560,11 @@ async function generateAI(){
 
   const msgs = [{
     role:"system",
-    content:`You are an expert health advisor and data analyst. Analyze the user's recent health data (1 day, 1 week, 1 month). Write everything in ${sysLang} only.
+    content:`You are an elite, highly detailed health advisor. Analyze the user's data (1 day, 1 week, 1 month). Write everything in ${sysLang} only.
 Provide:
-1) A highly personalized **interpretation** of their recent activities, focusing explicitly on patterns found in their data (e.g., changes across days, correlations between metrics like sleep and stress), and acknowledging their progress compared to past data. Avoid generic advice.
-2) **Recommendations** that provide concrete, actionable micro-steps based on their baseline data, and tailored targets based on their own historical best.
-Respond STRICTLY in valid JSON format: {"interpretation":"...", "recommendations":"..."}. Use clear paragraphs. Do NOT use markdown in your JSON strings.`
+1) A comprehensive **Interpretation**: Explain daily patterns, shifts in metrics (weight, sleep, exercise), and specific data-driven correlations. Acknowledge milestones and progress compared to historical averages. Use at least 2-3 detailed paragraphs.
+2) Robust **Recommendations**: Give concrete, specific micro-steps and personalized targets (e.g., "Aim for 30 min of zone 2 exercise on Tuesdays"). Tailor these to their current baseline. Use at least 2-3 detailed paragraphs.
+Respond ONLY in valid JSON: {"interpretation":"...", "recommendations":"..."}. Ensure the total length is significant and high-quality. No generic advice. Do NOT use markdown.`
   },{
     role:"user",
     content: JSON.stringify(promptData)
