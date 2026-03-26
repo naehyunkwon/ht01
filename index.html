@@ -1568,11 +1568,31 @@ Respond STRICTLY in valid JSON format: {"interpretation":"...", "recommendations
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
-      body:JSON.stringify({model:'gpt-3.5-turbo',messages:msgs})
+      body:JSON.stringify({model:'gpt-4o-mini',messages:msgs,max_tokens:1500})
     });
     const json = await res.json();
     if(json.error) throw new Error(json.error.message);
-    const result = JSON.parse(json.choices[0].message.content);
+    let raw = json.choices[0].message.content.trim();
+    
+    // Robust JSON recovery: fix unterminated strings from truncated responses
+    // Strip markdown code fences if present
+    raw = raw.replace(/^```json\s*/i,'').replace(/```\s*$/,'');
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch(e) {
+      // Attempt recovery: close any unterminated strings/objects
+      let fixed = raw;
+      // Count unmatched quotes
+      const quoteCount = (fixed.match(/(?<!\\)"/g)||[]).length;
+      if (quoteCount % 2 !== 0) fixed += '"';
+      // Close braces
+      const opens = (fixed.match(/{/g)||[]).length;
+      const closes = (fixed.match(/}/g)||[]).length;
+      for (let i = 0; i < opens - closes; i++) fixed += '}';
+      result = JSON.parse(fixed);
+    }
+    
     document.getElementById('ai-interp-box').textContent = result.interpretation || '-';
     document.getElementById('ai-reco-box').textContent = result.recommendations || '-';
   } catch(err) {
