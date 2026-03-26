@@ -1721,10 +1721,11 @@ function refreshCurrentTab(){
     if(triggered){
       indicator.style.top = '16px';
       indicator.style.animation = 'ptr-spin 0.6s linear infinite';
-      setTimeout(()=>{
-        sessionStorage.setItem('ptr-tab', currentTab);
-        window.location.reload();
-      }, 500);
+      Promise.all([loadFromSupabase(), loadAppSettings()]).then(()=>{
+        refreshCurrentTab();
+        indicator.style.animation = '';
+        indicator.style.top = '-50px';
+      });
     } else {
       indicator.style.top = '-50px';
     }
@@ -1744,14 +1745,7 @@ applyLang();
 applyTheme(DB.settings.theme||'auto');
 metricOrder=DB.settings.order;
 
-// Restore tab after pull-to-refresh
-const ptrTab = sessionStorage.getItem('ptr-tab');
-if(ptrTab){
-  sessionStorage.removeItem('ptr-tab');
-  switchTab(ptrTab);
-} else {
-  renderHome();
-}
+renderHome();
 // Load Supabase data and refresh UI
 initSupabase();
 Promise.all([loadFromSupabase(), loadAppSettings()]).then(()=>{
