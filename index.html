@@ -1721,14 +1721,10 @@ function refreshCurrentTab(){
     if(triggered){
       indicator.style.top = '16px';
       indicator.style.animation = 'ptr-spin 0.6s linear infinite';
-      Promise.all([loadFromSupabase(), loadAppSettings()]).then(()=>{
-        refreshCurrentTab();
-        indicator.style.animation = '';
-        indicator.style.top = '-50px';
-      }).catch(()=>{
-        indicator.style.animation = '';
-        indicator.style.top = '-50px';
-      });
+      setTimeout(()=>{
+        sessionStorage.setItem('ptr-tab', currentTab);
+        window.location.reload();
+      }, 500);
     } else {
       indicator.style.top = '-50px';
     }
@@ -1747,11 +1743,23 @@ lang=DB.settings.lang||'ko';
 applyLang();
 applyTheme(DB.settings.theme||'auto');
 metricOrder=DB.settings.order;
-renderHome();
+
+// Restore tab after pull-to-refresh
+const ptrTab = sessionStorage.getItem('ptr-tab');
+if(ptrTab){
+  sessionStorage.removeItem('ptr-tab');
+  switchTab(ptrTab);
+} else {
+  renderHome();
+}
 // Load Supabase data and refresh UI
 initSupabase();
 Promise.all([loadFromSupabase(), loadAppSettings()]).then(()=>{
-  refreshCurrentTab();
+  renderHome();
+  if(document.getElementById('page-records').classList.contains('active'))renderRecords();
+  if(document.getElementById('page-charts').classList.contains('active'))renderCharts();
+  if(document.getElementById('page-ai').classList.contains('active'))renderAi();
+  if(document.getElementById('page-settings').classList.contains('active'))renderSettings();
 });
 
 // ── Daily Rollover Check ──
