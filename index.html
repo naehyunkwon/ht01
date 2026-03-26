@@ -387,7 +387,7 @@ const T = {
     logicTitle:'점수 계산 방식',logicSummary:'건강 점수는 어떻게 계산되나요?',
     addPastDate:'+ 과거 기록 추가',
     navAi:'AI 추천',aiTitle:'AI 추천',aiInterpTitle:'최근 건강 모니터링 해석',aiRecoTitle:'AI 맞춤 추천',
-    aiGenerate:'AI 분석 생성하기',aiWait:'분석 중...',aiNoKey:'설정창에서 OpenAI API 키를 먼저 입력해주세요.',
+    aiGenerate:'AI 분석 생성하기',aiWait:'분석 중...',aiNoKey:'설정창에서 OpenAI API 키를 먼저 입력해주세요.',aiDefaultMsg:'데이터를 분석하려면 아래 버튼을 누르세요.',
     logicContent:`<p style="margin-bottom:8px">건강 점수(100점 만점)는 다음 항목들을 종합하여 계산됩니다:</p>
       <ul style="padding-left:16px;margin-bottom:12px">
         <li><b>수면 (20점):</b> 7~9시간 수면 시 만점. 부족하거나 과수면 시 감점. (수면 재단 권장량)</li>
@@ -426,7 +426,7 @@ const T = {
     logicTitle:'Scoring Logic',logicSummary:'How is the Health Score calculated?',
     addPastDate:'+ Add Past Date',
     navAi:'AI Recommend',aiTitle:'AI Recommend',aiInterpTitle:'Interpretation of recent activities',aiRecoTitle:'AI Recommendations',
-    aiGenerate:'Generate AI Analysis',aiWait:'Analyzing...',aiNoKey:'Please enter OpenAI API key in Settings first.',
+    aiGenerate:'Generate AI Analysis',aiWait:'Analyzing...',aiNoKey:'Please enter OpenAI API key in Settings first.',aiDefaultMsg:'Press the button below to analyze your data.',
     logicContent:`<p style="margin-bottom:8px">The Health Score (out of 100) is calculated based on the following:</p>
       <ul style="padding-left:16px;margin-bottom:12px">
         <li><b>Sleep (20 pts):</b> 7-9 hours optimal. Penalized for too little or too much. (Sleep Foundation)</li>
@@ -699,7 +699,7 @@ function calcScore(rec){
   return Math.max(0,Math.min(100,score));
 }
 function scoreGrade(s){if(s===null)return'';if(s>=85)return t('gradeAwesome');if(s>=65)return t('gradeGood');if(s>=45)return t('gradeOk');return t('gradeLow');}
-function scoreColor(s){if(s===null)return'var(--accent)';if(s>=75)return'#30D158';if(s>=50)return'#FF9F0A';return'#FF453A';}
+function scoreColor(s){if(s===null)return'var(--accent)';if(s>=65)return'#30D158';if(s>=40)return'#FF9F0A';return'#FF453A';}
 
 // ── Date label ──
 function fmtDate(d){
@@ -1301,7 +1301,7 @@ function drawChart(canvas,oCanvas,vals,dates,color,opts,H,scrollWrap){
     vals.forEach((v,i)=>{
       if(v===null)return;
       const x=toX(i);const y=toY(v);
-      const bColor=v>=75?'#30D158':v>=50?'#FF9F0A':'#FF453A';
+      const bColor=v>=65?'#30D158':v>=40?'#FF9F0A':'#FF453A';
       ctx.fillStyle=bColor;
       // rounded top corners
       const r=Math.min(barW/2, 4);
@@ -1515,6 +1515,11 @@ function renderAi(){
   document.getElementById('ai-interp-title').textContent=t('aiInterpTitle');
   document.getElementById('ai-reco-title').textContent=t('aiRecoTitle');
   document.getElementById('btn-generate-ai').textContent=t('aiGenerate');
+  const interpBox = document.getElementById('ai-interp-box');
+  const defaultTexts = ['데이터를 분석하려면 아래 버튼을 누르세요.', 'Press the button below to analyze your data.'];
+  if (defaultTexts.includes(interpBox.textContent)) {
+    interpBox.textContent = t('aiDefaultMsg');
+  }
 }
 
 async function generateAI(){
@@ -1595,6 +1600,12 @@ Respond STRICTLY in valid JSON format: {"interpretation":"...", "recommendations
     
     document.getElementById('ai-interp-box').textContent = result.interpretation || '-';
     document.getElementById('ai-reco-box').textContent = result.recommendations || '-';
+    
+    // Auto-reset after 1 minute
+    setTimeout(() => {
+      document.getElementById('ai-interp-box').textContent = t('aiDefaultMsg');
+      document.getElementById('ai-reco-box').textContent = '-';
+    }, 60000);
   } catch(err) {
     alert("AI Error: " + err.message);
   } finally {
